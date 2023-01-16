@@ -1,8 +1,8 @@
 ## 실행 환경
-aistage 서버 python version 이 3.9.13이라 여기에 맞춤
+aistage 서버 python version 이 3.8.5 이라 여기에 맞춤(3.8.5 가 맞음)
 
 ```
-conda create -n final_project python=3.9.13
+conda create -n final_project
 pip install -r requirements.txt
 bash ./install.sh # hanspell은 pip에 없음
 ```
@@ -14,6 +14,6 @@ pip list --format=freeze > ./requirements.txt
 
 ## streamlit run
 ```
-streamlit run main.py
+streamlit run main.py --server.port 30001
 ```
 
