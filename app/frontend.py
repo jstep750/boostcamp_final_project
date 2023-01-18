@@ -14,18 +14,20 @@ page_buttons=[]
 #검색페이지
 def search_page():
     #Google처럼 어플 제목으로 하는 것이 좋을듯
-    st.markdown("<h1 style='text-align: center;'>News Summarization</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>NEWSUMMARY</h1>", unsafe_allow_html=True)
     search_contain = st.empty()
     news_contain = st.empty()
-   
+    with open("app/style.css") as source_css:
+        st.markdown(f"<style>{source_css.read()}</style>",unsafe_allow_html=True)
     with search_contain.container():
         #텍스트박스를 html로 다르게 바꿀 수 있을지도?
-        col1, col2 = st.columns([2, 1])
-        company_name = col1.text_input("검색",st.session_state.company_name if st.session_state.company_name else ""
-                                , placeholder ="회사명 입력")
+        
+        company_name = st.text_input("검색",st.session_state.company_name if st.session_state.company_name else ""
+                                , placeholder ="회사명 입력",label_visibility='collapsed')
         st.session_state.company_name = company_name
+        col1, col2 = st.columns([5, 2])
 
-        search_date = col2.date_input("기간",value=(datetime.datetime.now(), datetime.datetime.now()))
+        search_date = col2.date_input("기간",value=(datetime.datetime.now(), datetime.datetime.now()),label_visibility='collapsed')
         start_date = f"{search_date[0].year:0>4d}{search_date[0].month:0>2d}{search_date[0].day:0>2d}"
         end_date = f"{search_date[1].year:0>4d}{search_date[1].month:0>2d}{search_date[1].day:0>2d}"
         if company_name:

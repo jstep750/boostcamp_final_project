@@ -47,12 +47,22 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int) -> Dict:
     #2. 전처리
 
     #3. 토픽 분류
-
+    news_df = pd.read_csv("app/bertopic_result(삼성전자).csv")
+    topic_df = pd.DataFrame(columns=['topic_number','topic_text'])
+    
     #4. 한줄요약
+    #토픽번호에 맞는 데이터만 가져오기
+    for topic_number in set(news_df['Topic']):
+        if topic_number == -1:
+            continue
+        now_news_df = news_df[news_df['Topic']==topic_number]
+
+
+        
 
     #5. 한줄요약 반환 result = ['topic1','topic2',....]
     topics_number=[0,1,2]
-
+    
     topics_text = ["주제1", "주제2", "주제3"]
     return {
         "topics_number": topics_number,
