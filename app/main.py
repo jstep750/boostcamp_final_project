@@ -33,6 +33,7 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int) -> Dict:
     response = List[{'_index','_type','_id','_score',
                     '_source':{'title','description','titleNdescription','URL','date'}}]
     '''
+    '''
     response = requests.get(f"http://118.67.133.53:30001/search/{company_name}/?&date_gte={date_gte}&date_lte={date_lte}").json()
     
     # 데이터프레임으로 변환 news_df = ['title','description','titleNdescription','URL','date']
@@ -42,7 +43,7 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int) -> Dict:
         for key, value in response_source.items():
             news_df[key].append(value)
     news_df = pd.DataFrame(news_df)
-
+    '''
     #2. 전처리
 
     #3. 토픽 분류
