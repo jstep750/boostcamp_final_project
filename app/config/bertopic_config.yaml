@@ -1,0 +1,7 @@
+file:
+  stopwords_path: "bertopic_korean_stopwords.txt"
+
+model:
+  model_name: "paraphrase-multilingual-mpnet-base-v2"
+  top_n_words: 10
+  nr_topics: 10

@@ -1,53 +1,45 @@
 from fastapi import FastAPI
-import os
-from pathlib import Path
 import requests
-from crawl import Crawl
-from context import context
-from preprocess import Preprocess
-from pandas_parallel_apply import DataFrameParallel
-from typing import Dict
+
 import pandas as pd
+from typing import Dict
 from collections import defaultdict
 
-ASSETS_DIR_PATH = os.path.join(Path(__file__).parent, "")
-
+from omegaconf import OmegaConf
+from app.utils.NaverCrawl.navercrawl import naver_crawl
+from app.utils.Bigkindscrawl import bigkinds_crawl
+from app.utils.BERTopic.bertopic_model import bertopic_modeling
 app = FastAPI()
 # 뉴스 데이터프레임
 news_df = defaultdict(list)
 
 #크롤링부터 한줄요약까지
 @app.get("/company_name/")
-def request_crawl_news(company_name:str, date_gte:int,date_lte:int) -> Dict:
+def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int = 999) -> Dict:
     '''
     input:
         company_name(str): 검색어
         date_gte(int): 시작일
         date_lte(int): 종료일
+        news_num(int): 검색 뉴스 수
     output:
         Dict{"topics_number"(str) : 토픽 번호
              "topics_text"(str) : 토픽 한줄요약}
     '''
     #1. 크롤링
-    '''
-    response = List[{'_index','_type','_id','_score',
-                    '_source':{'title','description','titleNdescription','URL','date'}}]
-    '''
-    '''
-    response = requests.get(f"http://118.67.133.53:30001/search/{company_name}/?&date_gte={date_gte}&date_lte={date_lte}").json()
-    
-    # 데이터프레임으로 변환 news_df = ['title','description','titleNdescription','URL','date']
-    news_df = defaultdict(list)
-    for idx in range(len(response)):
-        response_source = response[idx]['_source']
-        for key, value in response_source.items():
-            news_df[key].append(value)
-    news_df = pd.DataFrame(news_df)
-    '''
+    #Naver 크롤링
+    news_df = naver_crawl(company_name,news_num)
+    #BigKinds 크롤링
+    #news_df = bigkinds_crawl(company_name,date_gte,date_lte)
+
     #2. 전처리
 
     #3. 토픽 분류
-    news_df = pd.read_csv("app/bertopic_result(삼성전자).csv")
+    cfg = OmegaConf.load(f"./app/config/bertopic_config.yaml")
+    #news_df = pd.read_csv("./app/utils/BERTopic/crawl_result(삼성전자).csv")
+    news_df = bertopic_modeling(cfg, news_df)
+    print(news_df.columns, len(news_df))
+
     topic_df = pd.DataFrame(columns=['topic_number','topic_text'])
     
     #4. 한줄요약
@@ -56,14 +48,14 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int) -> Dict:
         if topic_number == -1:
             continue
         now_news_df = news_df[news_df['Topic']==topic_number]
-
-
         
 
     #5. 한줄요약 반환 result = ['topic1','topic2',....]
     topics_number=[0,1,2]
     
-    topics_text = ["주제1", "주제2", "주제3"]
+    topics_text = ["편의점 GS25가 '원스피리츠'와 협업해 선보인 원소주 스피릿이 지난해 GS25에서 판매되는 모든 상품 중 매출 순위 7위를 기록했다고 17일 밝혔다.", 
+                    "원소주 스피릿은 출시 직후 2달 동안 입고 물량이 당일 완판되는 오픈런 행렬이 이어져 왔으며 최근 GS25와 원스피리츠의 공급 안정화 노력에 따라 모든 점포에서 수량제한 없이 상시 구매가 가능해졌다.", 
+                    "GS25는 오는 18일 원소주 스피릿 누적 판매량 400만 병 돌파 기념으로 상시 운영되는 1개입 전용 패키지를 선보여 상품의 프리미엄을 더하기로 했다."]
     return {
         "topics_number": topics_number,
         "topics_text": topics_text}
