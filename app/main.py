@@ -11,6 +11,7 @@ from app.utils.Bigkindscrawl import bigkinds_crawl
 from app.utils.BERTopic.bertopic_model import bertopic_modeling
 from app.utils.Extract_context import extract_context
 from app.utils.One_sent_summarization import summary_one_sent
+#from app.utils.KorBertSum.src.extract_topk_summarization import extract_topk_summarization
 import time
 app = FastAPI()
 
@@ -39,8 +40,10 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     #Naver 크롤링 news_df = naver_crawl(company_name,news_num)
     #BigKinds 크롤링
     news_df = bigkinds_crawl(company_name,date_gte,date_lte) # news_df = ['title','description','titleNdescription','URL','date']
-    
+    #news_df.to_csv("crwal_news.csv",index=False)
+    #news_df.to_pickle("crwal_news.pkl")
     times[1] = time.time()
+    
     #2. 전처리
     print("extract context")
     news_df = extract_context(news_df)
@@ -49,7 +52,6 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     
     times[1] = time.time()
     times[2] = time.time()
-    news_df = pd.read_pickle("crwal_news_context.pkl")
     #3. 토픽 분류
     print("start divide topic")
     cfg = OmegaConf.load(f"./app/config/bertopic_config.yaml")
@@ -62,7 +64,6 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     print("summary one sentence")
     topic_df = pd.DataFrame()
     #토픽번호에 맞는 데이터만 가져오기
-    print("total topic num : ",set(news_df['topic']))
     for topic_number in set(news_df['topic']):
         if topic_number == -1:
             continue
@@ -74,8 +75,9 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
 
     times[4] = time.time()
     print("crwal_end")
-    print(f'시작시간 : {times[0]}\n크롤링 : {times[1] - times[0]}\ncontext: {times[2]-times[1]}\n 토픽분류: {times[3]-times[2]}\n 한줄요약: {times[4]-times[3]}')
-    print(f'전체시간 : {times[4]-times[0]} sec')
+    print(f'crawl : {times[1] - times[0]}\ncontext: {times[2]-times[1]}\n BERTtopic: {times[3]-times[2]}\n onesent: {times[4]-times[3]}')
+    print(f'total time : {times[4]-times[0]} sec')
+    
     #topic_df = pd.read_pickle("topic_one_sent.pkl")
     #5. 한줄요약 반환 result df = ['topic','one_sent's] 
     return {'topic': list(topic_df['topic']),'one_sent':list(topic_df['one_sent'])}
@@ -88,7 +90,7 @@ def request_summary_news(topic_number:int):
     #전처리
 
     #문단요약
-
+    #topic_df = pd.concat([topic_df,extract_topk_summarization(news_df)])
     #return = 문단
     return {"summarization":'''
             편의점 GS25가 '원스피리츠'와 협업해 선보인 원소주 스피릿이 지난해 GS25에서 판매되는 모든 상품 중 매출 순위 7위를 기록했다고 17일 밝혔다.\n
@@ -98,7 +100,6 @@ def request_summary_news(topic_number:int):
     
 
 # 뉴스 리스트 출력
-
 @app.get("/news/{topic_number}")
 def request_summary_news(topic_number:int):
     #토픽 뉴스 수집
