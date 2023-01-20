@@ -75,7 +75,7 @@ def extract_context(df:pd.DataFrame) -> pd.DataFrame:
     for i,context in enumerate(df['text']):
         preprocess = text_filter(context)[:60]
         if(len(preprocess) > 3):
-            text.append([(i,v) for i,v in enumerate(preprocess)])
+            text.append([v for i,v in enumerate(preprocess)])
         else:
             text.append('Hello world')
             
