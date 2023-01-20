@@ -20,13 +20,14 @@
 ### Team member
 김진호                       |  신혜진                   |  이효정                    |  이상문                    |  정지훈                    |
 :-------------------------:|:------------------------:|:------------------------:|:------------------------:|:-------------------------:
-![](https://...Dark.png)   | ![](https://...Ocean.png)| ![](https://...Dark.png) | ![](https://...Ocean.png)| ![](https://...Ocean.png)
+<img src="./asset/kk_image.png" width=25% height=25%>    | <img src="./asset/kk_image.png" width=25% height=25%>  | <img src="./asset/kk_image.png" width=25% height=25%>  | <img src="./asset/kk_image.png" width=75% height=75%> | <img src="./asset/kk_image.png" width=25% height=25%> 
 | 토픽 모델링  | 본문 요약 모델링| 프론트, 백엔드| 뉴스 데이터 수집| 한줄 요약 모델링
 
 ## Model/ Research
 
 ### dataset
-aistage 서버 python version 이 3.8.5 이라 여기에 맞춤(3.8.5 가 맞음)
+Naver news crawl api 활용 <br>
+bigkinds 공공 뉴스데이터 활용
 
 ### Model
 
@@ -37,8 +38,6 @@ aistage 서버 python version 이 3.8.5 이라 여기에 맞춤(3.8.5 가 맞음
 ### Architecture
 
 ## Result
-
-###t
 
 ### 구현
 
