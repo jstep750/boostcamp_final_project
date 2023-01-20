@@ -11,6 +11,15 @@ from datasketch import MinHash
 import pickle
 
 class NewsCluster:
+    """Class for clustering similar news using TfidfVectorizer
+
+    Attributes:
+        self.okt (konlpy) : konlpy morpheme analyzer
+        self.tfidf_vectorizer (tfidf_vectorizer) : tfidf_vectorizer instance
+
+    Returns:
+        None
+    """
 
     def __init__(self, min_df = 1, ngram_range=(1,1)):
         self.okt = konlpy.tag.Okt()
@@ -19,6 +28,21 @@ class NewsCluster:
     def cluster(self,
                 data,
                 num_clusters):
+
+        """ Clustering similar news based on num_cluster args
+
+        Before clustering each news article(each dictionary) has no 'label' key
+        After clustering, each news article(each dictionary) will get 'label' key that means
+        which cluster this article is in 
+
+        Args:
+            data (List[dict]) : list of dict, each dict contains one news article
+            num_cluster (int) : number of cluster to make
+
+        Returns:
+            data (List[dict]) : list of idct, each dict contains one news article with a cluster label
+
+        """
 
         documents_processed = []
 
@@ -50,7 +74,17 @@ class NewsCluster:
 
 class RemoveDup:
 
-    # 중복 기사도 제거 하는 방법이 다양
+    """Class for removing duplicated news articles in a cluster using Jaccard similarity
+
+    Attributes:
+        self.m1 (MinHash) : Jaccard MinHash for sentence1
+        self.m2 (Minhash) : Jaccard MinHash for sentence2
+
+    note:
+        Recommend this class is used after clustered news article set
+        otherwise it will not perform very well
+
+    """
 
     def __init__(self):
 
@@ -60,6 +94,17 @@ class RemoveDup:
     def remove_dup(self,
                     title_N_desc,
                     threshold=0.1):
+        
+        """Remove duplicated news articles in a cluster using Jaccard similarity
+
+        Args:
+            title_N_desc (List[str]) : List of sentence to be checked
+            threshold (float) : criteria number for judging whether it is duplicated between two sentences
+
+        Returns:
+            remove_list (List[int]) : List of index(int) to be removed => it's a duplicate sentence
+
+        """
 
         total_Jaccard = []
         for i in range(len(title_N_desc)):

@@ -5,9 +5,12 @@ from Database.data_insert import DataInsert
 from utils import NewsCluster, RemoveDup
 
 import pickle
+from omegaconf import OmegaConf
+cfgs = OmegaConf.load(f"./Database/config/base_config.yaml")
 
 app = FastAPI()
-DI = DataInsert('bigkinds_newsdata')
+#DI = DataInsert('bigkinds_newsdata')
+DI = DataInsert(cfgs)
 newscluster = NewsCluster()
 removedup = RemoveDup()
 
@@ -49,7 +52,3 @@ def remove_dup(data):
     output = removedup.remove_dup(title_N_desc)
 
     return output
-
-# TODO
-# 클러스터
-# 중복제거
