@@ -1,24 +1,27 @@
 import pandas as pd
 import numpy as np
 import re
-#import kss
+
+# import kss
 from soynlp.normalizer import *
 from collections import OrderedDict
-#from pykospacing import Spacing
+
+# from pykospacing import Spacing
 from hanspell import spell_checker
-#from konlpy.tag import Mecab
 
-class Preprocess():
+# from konlpy.tag import Mecab
 
+
+class Preprocess:
     def __init__(self):
-        
-        #self.spacing = Spacing()
+
+        # self.spacing = Spacing()
         self.excluded_words = ["이하 뉴스1", "이 줄은 실제 뉴스"]
-        #self.mecab = Mecab()
+        # self.mecab = Mecab()
 
-    def _split_context(self,texts):
+    def _split_context(self, texts):
 
-        context = texts.split('\n')
+        context = texts.split("\n")
         # sents = []
 
         # for sent in context:
@@ -28,7 +31,7 @@ class Preprocess():
         #         sents.extend(splited_sent)
 
         return context
-    
+
     def _remove_html(self, texts):
         """
         HTML 태그를 제거합니다.
@@ -40,7 +43,7 @@ class Preprocess():
             if text:
                 preprocessed_text.append(text)
         return preprocessed_text
-    
+
     def _remove_email(self, texts):
         """
         이메일을 제거합니다.
@@ -48,7 +51,9 @@ class Preprocess():
         """
         preprocessed_text = []
         for text in texts:
-            text = re.sub(r"[a-zA-Z0-9+-_.]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", "", text).strip()
+            text = re.sub(
+                r"[a-zA-Z0-9+-_.]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", "", text
+            ).strip()
             if text:
                 preprocessed_text.append(text)
         return preprocessed_text
@@ -124,7 +129,7 @@ class Preprocess():
             for re_pattern in re_patterns:
                 text = re.sub(re_pattern, "", text).strip()
             if text:
-                preprocessed_text.append(text)    
+                preprocessed_text.append(text)
         return preprocessed_text
 
     def _remove_copyright(self, texts):
@@ -134,14 +139,14 @@ class Preprocess():
         """
         re_patterns = [
             r"\<저작권자(\(c\)|ⓒ|©|\(Copyright\)|(\(c\))|(\(C\))).+?\>",
-            r"저작권자\(c\)|ⓒ|©|(Copyright)|(\(c\))|(\(C\))"
+            r"저작권자\(c\)|ⓒ|©|(Copyright)|(\(c\))|(\(C\))",
         ]
         preprocessed_text = []
         for text in texts:
             for re_pattern in re_patterns:
                 text = re.sub(re_pattern, "", text).strip()
             if text:
-                preprocessed_text.append(text)    
+                preprocessed_text.append(text)
         return preprocessed_text
 
     def _remove_photo_info(self, texts):
@@ -152,7 +157,11 @@ class Preprocess():
         """
         preprocessed_text = []
         for text in texts:
-            text = re.sub(r"\(출처 ?= ?.+\) |\(사진 ?= ?.+\) |\(자료 ?= ?.+\)| \(자료사진\) |사진=.+기자 ", "", text).strip()
+            text = re.sub(
+                r"\(출처 ?= ?.+\) |\(사진 ?= ?.+\) |\(자료 ?= ?.+\)| \(자료사진\) |사진=.+기자 ",
+                "",
+                text,
+            ).strip()
             if text:
                 preprocessed_text.append(text)
         return preprocessed_text
@@ -213,9 +222,37 @@ class Preprocess():
         return preprocessed_text
 
     def _clean_punc(self, texts):
-        punct_mapping = {"‘": "'", "₹": "e", "´": "'", "°": "", "€": "e", "™": "tm", "√": " sqrt ", "×": "x", "²": "2", "—": "-", "–": "-", \
-            "’": "'", "_": "-", "`": "'", '“': '"', '”': '"', '“': '"', "£": "e", '∞': 'infinity', 'θ': 'theta', '÷': '/', 'α': 'alpha', '•': '.', \
-                'à': 'a', '−': '-', 'β': 'beta', '∅': '', '³': '3', 'π': 'pi', }
+        punct_mapping = {
+            "‘": "'",
+            "₹": "e",
+            "´": "'",
+            "°": "",
+            "€": "e",
+            "™": "tm",
+            "√": " sqrt ",
+            "×": "x",
+            "²": "2",
+            "—": "-",
+            "–": "-",
+            "’": "'",
+            "_": "-",
+            "`": "'",
+            "“": '"',
+            "”": '"',
+            "“": '"',
+            "£": "e",
+            "∞": "infinity",
+            "θ": "theta",
+            "÷": "/",
+            "α": "alpha",
+            "•": ".",
+            "à": "a",
+            "−": "-",
+            "β": "beta",
+            "∅": "",
+            "³": "3",
+            "π": "pi",
+        }
 
         preprocessed_text = []
         for text in texts:
@@ -237,7 +274,7 @@ class Preprocess():
             if text:
                 preprocessed_text.append(text)
         return preprocessed_text
-        
+
     def _remove_dup_sent(self, texts):
         """
         중복된 문장을 제거합니다.
@@ -264,14 +301,13 @@ class Preprocess():
         for text in texts:
             try:
                 spelled_sent = spell_checker.check(text)
-                checked_sent = spelled_sent.checked 
+                checked_sent = spelled_sent.checked
                 if checked_sent:
                     preprocessed_text.append(checked_sent)
             except:
                 preprocessed_text.append(text)
         return preprocessed_text
 
-    
     def _excluded_word_filter(self, texts):
         """
         특정 단어를 포함하는 문장 필터링
@@ -286,7 +322,6 @@ class Preprocess():
             if not include_flag:
                 preprocessed_text.append(text)
         return preprocessed_text
-
 
     # def _morph_filter(self, texts):
     #     """
@@ -316,15 +351,15 @@ class Preprocess():
     #                 preprocessed_text.append(text)
     #                 break
     #     return preprocessed_text
-    
+
     def _remove_stopwords(self, sents):
         #  큰 의미가 없는 불용어 정의
         #  사용자가 자체적으로 stopwords를 정희하면 될 듯
-        stopwords = ['소취요', '-', '조드윅', '포스터', '앓는', '서린']
+        stopwords = ["소취요", "-", "조드윅", "포스터", "앓는", "서린"]
         preprocessed_text = []
         for sent in sents:
-            sent = [w for w in sent.split(' ') if w not in stopwords]# 불용어 제거
-            preprocessed_text.append(' '.join(sent))
+            sent = [w for w in sent.split(" ") if w not in stopwords]  # 불용어 제거
+            preprocessed_text.append(" ".join(sent))
         return preprocessed_text
 
     def __call__(self, text):
@@ -350,8 +385,8 @@ class Preprocess():
             # context = self._spell_check_sent(context)
             # context = self._excluded_word_filter(context)
             # context = self._remove_stopwords(context)
-            
-            return ' '.join(context)
-    
+
+            return " ".join(context)
+
         else:
             return None

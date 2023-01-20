@@ -1,0 +1,8 @@
+crawl_args:
+  download_output_dir: 'Newsdataset.zip'
+  extract_output_dir: 'Financial_news'
+
+data_insert_args:
+  index_name: 'bigkinds_newsdata'
+  setting_path: '/opt/ml/final-project-level3-nlp-05/DB/Database/config/setting.json'
+
