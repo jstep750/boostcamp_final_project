@@ -23,5 +23,10 @@ def bigkinds_crawl(company_name:str,date_gte:int,date_lte:int) -> pd.DataFrame:
         for key, value in response_source.items():
             news_df[key].append(value)
     news_df = pd.DataFrame(news_df)
-    
+    news_df = news_df.drop(columns = ['titleNdescription'])
+    news_df.rename(columns = {'URL': 'url'}, inplace = True)
+    #news_df = ['title','description','titleNdescription','URL','date']
     return news_df
+
+if __name__ == "__main__":
+    bigkinds_crawl("삼성전자","20221225","20230120")

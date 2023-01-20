@@ -88,7 +88,7 @@ def bertopic_modeling(cfg ,df: pd.DataFrame) -> pd.DataFrame:
 
     src_df = model.get_document_info(preprocessed_docs)
     bertopic_df = pd.concat([drop_df, src_df["Topic"], src_df["Top_n_words"]], axis=1)
-
+    bertopic_df.rename(columns = {'Topic': 'topic','Top_n_words': 'top_n_words'}, inplace = True)
 
     return bertopic_df
 
@@ -102,10 +102,8 @@ def remove_duplicate(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: _description_
     """
-    drop_df = df.drop_duplicates("title")
-    drop_df = drop_df.drop_duplicates("originallink")
-    drop_df = drop_df.drop_duplicates("link")
-    drop_df = drop_df.drop_duplicates("description")
+    for col in df.columns:
+        drop_df = df.drop_duplicates(col)
     drop_df = drop_df.reset_index(drop=True)
     return drop_df
 
