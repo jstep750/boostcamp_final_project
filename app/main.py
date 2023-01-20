@@ -33,6 +33,7 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     '''
     times=[0 for i in range(5)]
     times[0]= time.time()
+    
     #1. 크롤링
     print("crawl news")
     #Naver 크롤링 news_df = naver_crawl(company_name,news_num)
@@ -45,8 +46,10 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     news_df = extract_context(news_df)
     #news_df.to_csv("crwal_news_context.csv",index=False)
     #news_df.to_pickle("crwal_news_context.pkl")
-
+    
+    times[1] = time.time()
     times[2] = time.time()
+    news_df = pd.read_pickle("crwal_news_context.pkl")
     #3. 토픽 분류
     print("start divide topic")
     cfg = OmegaConf.load(f"./app/config/bertopic_config.yaml")
@@ -55,7 +58,6 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     #news_df.to_pickle("after_bertopic.pkl")
     
     times[3] = time.time()
-
     #4. 한줄요약
     print("summary one sentence")
     topic_df = pd.DataFrame()

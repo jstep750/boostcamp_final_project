@@ -45,12 +45,6 @@ def search_page():
                 st.session_state["topic_number"] = response['topic']
                 st.session_state["topics_text"] = response['one_sent']
                 
-                '''
-                st.session_state["topic_number"] = [0,1,2]
-                st.session_state["topics_text"] = ["편의점 GS25가 '원스피리츠'와 협업해 선보인 원소주 스피릿이 지난해 GS25에서 판매되는 모든 상품 중 매출 순위 7위를 기록했다고 17일 밝혔다.", 
-                    "원소주 스피릿은 출시 직후 2달 동안 입고 물량이 당일 완판되는 오픈런 행렬이 이어져 왔으며 최근 GS25와 원스피리츠의 공급 안정화 노력에 따라 모든 점포에서 수량제한 없이 상시 구매가 가능해졌다.", 
-                    "GS25는 오는 18일 원소주 스피릿 누적 판매량 400만 병 돌파 기념으로 상시 운영되는 1개입 전용 패키지를 선보여 상품의 프리미엄을 더하기로 했다."]
-                '''
             #버튼 추가   
             ''' 
             for idx in range(int(len(st.session_state["topic_number"]) / 2) + 1):                

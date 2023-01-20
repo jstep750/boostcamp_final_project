@@ -19,6 +19,9 @@ from umap import UMAP
 import argparse
 from omegaconf import OmegaConf
 
+from cuml.cluster import HDBSCAN
+from cuml.manifold import UMAP
+
 import os
 import sys
 from pathlib import Path
@@ -69,6 +72,10 @@ def bertopic_modeling(cfg ,df: pd.DataFrame) -> pd.DataFrame:
 
     custom_tokenizer = CustomTokenizer(Mecab(), ko_stop_words)
     vectorizer = CountVectorizer(tokenizer=custom_tokenizer, max_features=3000)
+    
+    # Create instances of GPU-accelerated UMAP and HDBSCAN
+    umap_model = UMAP(n_components=5, n_neighbors=15, min_dist=0.0)
+    hdbscan_model = HDBSCAN(min_samples=10, gen_min_span_tree=True)
 
     model = BERTopic(
         embedding_model = model_cfg.model_name,
@@ -139,3 +146,11 @@ if __name__ == "__main__":
     output_df.to_csv("result.csv", index=False)
     print(cfg)
     print(output_df)
+
+
+'''
+버토픽 gpu에서 실행하기
+pip install cupy-cuda11x
+pip install cuml-cu11 --extra-index-url=https://pypi.ngc.nvidia.com
+pip install cupy-cuda110
+'''

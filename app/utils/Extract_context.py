@@ -59,6 +59,14 @@ def text_filter(text): # str -> 전처리 -> 문장 배열
     return sentences
 
 
+def text_filter2(text): # 제목, description 전처리
+    text = clean_byline(text)
+    exclude_pattern = re.compile(r'[^\% 0-9a-zA-Zㄱ-ㅣ가-힣.,]+')
+    exclusions = exclude_pattern.findall(text)
+    result = exclude_pattern.sub(' ', text).strip()
+    return result
+
+
 def extract_context(df:pd.DataFrame) -> pd.DataFrame:
     df = add_context_to_df(df)
 
@@ -74,6 +82,9 @@ def extract_context(df:pd.DataFrame) -> pd.DataFrame:
     df['context'] = text
     df = df.drop(df[df['context'] == 'Hello world'].index)
     df = df.drop(columns=['text'])
+    df['title'] = df['title'].apply(text_filter2)
+    df['description'] = df['description'].apply(text_filter2)
+    #df = df.drop(columns= ['Unnamed: 0.1','Unnamed: 0'])
     print(f"{time.time()-start:.4f} sec")
     return df
 
