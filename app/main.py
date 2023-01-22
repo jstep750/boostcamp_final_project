@@ -11,7 +11,7 @@ from app.utils.Bigkindscrawl import bigkinds_crawl
 from app.utils.BERTopic.bertopic_model import bertopic_modeling
 from app.utils.Extract_context import extract_context
 from app.utils.One_sent_summarization import summary_one_sent
-#from app.utils.KorBertSum.src.extract_topk_summarization import extract_topk_summarization
+from app.utils.KorBertSum.src.extract_topk_summarization import extract_topk_summarization
 import time
 app = FastAPI()
 
@@ -32,9 +32,11 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
         Dict{"topics_number"(str) : 토픽 번호
              "topics_text"(str) : 토픽 한줄요약}
     '''
+    global news_df
+    global topic_df
     times=[0 for i in range(5)]
     times[0]= time.time()
-    
+    '''
     #1. 크롤링
     print("crawl news")
     #Naver 크롤링 news_df = naver_crawl(company_name,news_num)
@@ -47,11 +49,11 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     #2. 전처리
     print("extract context")
     news_df = extract_context(news_df)
-    #news_df.to_csv("crwal_news_context.csv",index=False)
-    #news_df.to_pickle("crwal_news_context.pkl")
-    
-    times[1] = time.time()
+    news_df.to_csv(f"{company_name}_{date_gte}_{date_lte}_crwal_news_context.csv",index=False)
+    news_df.to_pickle(f"{company_name}_{date_gte}_{date_lte}_crwal_news_context.pkl")
     times[2] = time.time()
+
+    
     #3. 토픽 분류
     print("start divide topic")
     cfg = OmegaConf.load(f"./app/config/bertopic_config.yaml")
@@ -77,20 +79,24 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     print("crwal_end")
     print(f'crawl : {times[1] - times[0]}\ncontext: {times[2]-times[1]}\n BERTtopic: {times[3]-times[2]}\n onesent: {times[4]-times[3]}')
     print(f'total time : {times[4]-times[0]} sec')
-    
-    #topic_df = pd.read_pickle("topic_one_sent.pkl")
+    '''
+    news_df = pd.read_pickle("after_bertopic.pkl")
+    topic_df = pd.read_pickle("topic_one_sent.pkl")
     #5. 한줄요약 반환 result df = ['topic','one_sent's] 
     return {'topic': list(topic_df['topic']),'one_sent':list(topic_df['one_sent'])}
     
 # 문단요약
 @app.get("/summary/{topic_number}")
-def request_summary_news(topic_number:int):
+def request_summary_news(topic_number):
+    global news_df
+    global topic_df
     #토픽 뉴스 수집
-
+    now_news_df = news_df[news_df['topic']==topic_number]
     #전처리
 
     #문단요약
     #topic_df = pd.concat([topic_df,extract_topk_summarization(news_df)])
+    #print(topic_df)
     #return = 문단
     return {"summarization":'''
             편의점 GS25가 '원스피리츠'와 협업해 선보인 원소주 스피릿이 지난해 GS25에서 판매되는 모든 상품 중 매출 순위 7위를 기록했다고 17일 밝혔다.\n
@@ -101,17 +107,17 @@ def request_summary_news(topic_number:int):
 
 # 뉴스 리스트 출력
 @app.get("/news/{topic_number}")
-def request_summary_news(topic_number:int):
+def request_summary_news(topic_number):
+    global news_df
+    global topic_df
     #토픽 뉴스 수집
-
+    now_news_df = news_df[news_df['topic']==topic_number]
     #return = [날짜, 언론사, 헤드라인, url]
-    return {"date":["2023.01.16", "2023.01.16.","2023.01.17."],
-            "press":["서울경제","헤럴드경제","머니투데이" ],
-            "headline":["포스코건설, 설 맞아 협력사 거래대금 897억원 조기 지급", 
-                        "연간 5만달러 넘는 해외송금 쉬워진다", 
-                        "박재범 '원소주 스피릿', GS25서 400만 병 팔렸다"],
-            "URL":["https://n.news.naver.com/mnews/article/011/0004145322?sid=101","https://n.news.naver.com/mnews/article/016/0002091309?sid=101","https://n.news.naver.com/mnews/article/008/0004841028?sid=101"]
+    return {"date":list(now_news_df['date']),
+            "title":list(now_news_df['title']),
+            "url":list(now_news_df['url'])
             }
+
 
 # 키워드 출력
 @app.get("/keyword/{topic_number}")

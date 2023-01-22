@@ -7,7 +7,35 @@ from streamlit.components.v1 import html
 from confirm_button_hack import cache_on_button_press
 
 #페이지 타이틀
-st.set_page_config(page_title="News Summarization")
+st.set_page_config(page_title="News Summarization",layout="wide")
+st.markdown("""
+                <html>
+                    <head>
+                    <style>
+                        ::-webkit-scrollbar {
+                            width: 10px;
+                            }
+
+                            /* Track */
+                            ::-webkit-scrollbar-track {
+                            background: #f1f1f1;
+                            }
+
+                            /* Handle */
+                            ::-webkit-scrollbar-thumb {
+                            background: #888;
+                            }
+
+                            /* Handle on hover */
+                            ::-webkit-scrollbar-thumb:hover {
+                            background: #555;
+                            }
+                    </style>
+                    </head>
+                    <body>
+                    </body>
+                </html>
+            """, unsafe_allow_html=True)
 
 def button_click(idx):
     st.wirte(idx)
@@ -26,70 +54,69 @@ def search_page():
     page_buttons=[]
     with search_contain.container():
         #검색창
-        company_name = st.text_input("검색", placeholder ="회사명 입력",label_visibility='collapsed')
-        
+        company_name = st.text_input("검색", value=st.session_state['company_name'], placeholder ="회사명 입력",label_visibility='collapsed', key="company_name")
         #기간 검색창
         col1, col2 = st.columns([5, 2])
         search_date = col2.date_input("기간",value=(datetime.date(2022,12,26), datetime.date(2022,12,30)),label_visibility='collapsed')
-        start_date = f"{search_date[0].year:0>4d}{search_date[0].month:0>2d}{search_date[0].day:0>2d}"  #시작검색일
-        end_date = f"{search_date[1].year:0>4d}{search_date[1].month:0>2d}{search_date[1].day:0>2d}"    #종료검색일
+        if len(search_date) > 1:
+            start_date = f"{search_date[0].year:0>4d}{search_date[0].month:0>2d}{search_date[0].day:0>2d}"  #시작검색일
+            end_date = f"{search_date[1].year:0>4d}{search_date[1].month:0>2d}{search_date[1].day:0>2d}"    #종료검색일
 
-        if st.session_state.company_name or company_name:
+        if st.session_state.company_name != "":
             # 회사이름 검색 요청
-            if st.session_state.company_name != company_name and company_name is not None:
-                st.session_state.company_name = company_name
-                st.text("start")
-                response = requests.get(f"http://localhost:8001/company_name/?company_name={st.session_state.company_name}&date_gte={start_date}&date_lte={end_date}&news_num=999")
-                st.text("end")
-                response = response.json()
-                st.session_state["topic_number"] = response['topic']
-                st.session_state["topics_text"] = response['one_sent']
-                
+            response = requests.get(f"http://localhost:8001/company_name/?company_name={st.session_state.company_name}&date_gte={start_date}&date_lte={end_date}&news_num=999")
+            response = response.json()
+            st.session_state["topic_number"] = response['topic']
+            st.session_state["topics_text"] = response['one_sent']
             #버튼 추가   
-            ''' 
-            for idx in range(int(len(st.session_state["topic_number"]) / 2) + 1):                
+            for idx in range(int(len(st.session_state["topic_number"]) / 2)):                
                 col1, col2 = st.columns([1,1])
                 topic_number = st.session_state["topic_number"][idx * 2]
                 topic_text = st.session_state["topics_text"][idx * 2]
-                col1.button(topic_text,key=f"button_{topic_number}",on_click = button_click, args=(idx,))
+                if len(topic_text) > 60:
+                    topic_text = topic_text[0:60] + "..."
+                col1.button(topic_text,key=idx * 2)
+                page_buttons.append(idx * 2)
+
                 topic_number = st.session_state["topic_number"][idx * 2 + 1]
                 topic_text = st.session_state["topics_text"][idx * 2 + 1]
-                col2.button(topic_text,key=f"button_{topic_number}",on_click = button_click, args=(idx,))
+                if len(topic_text) > 60:
+                    topic_text = topic_text[0:60] + "..."
+                col2.button(topic_text,key=idx * 2 + 1)
+                page_buttons.append(idx * 2 + 1)
                 
             
             if len(st.session_state["topic_number"]) % 2 == 1:
                 col1, col2 = st.columns([1,1])
                 topic_number = st.session_state["topic_number"][-1]
                 topic_text = st.session_state["topics_text"][-1]
-                col1.button(topic_text,key=f"button_{topic_number}",on_click = button_click, args=(idx))
-            '''
-            st.text(len(st.session_state["topic_number"]))
-            for idx, (topic_number, topic_text) in enumerate(zip(st.session_state["topic_number"],st.session_state["topics_text"])):
-                page_buttons.append(st.button(topic_text,key=f"button_{topic_number}"))
-            
-    for idx, button in enumerate(page_buttons):
-        if button:
+                if len(topic_text) > 60:
+                    topic_text = topic_text[0:60] + "..."
+                col1.button(topic_text,key=len(st.session_state["topic_number"]) -1)
+                page_buttons.append(len(st.session_state["topic_number"])-1)
+    
+    for button_key in page_buttons:
+        if st.session_state[button_key]:
             with news_contain.container():
-                news_page(idx)
+                news_page(button_key)
             search_contain.empty()    
+    st.write(st.session_state)
 
 #뉴스 요약 페이지
 def news_page(idx):
     #한줄요약(제목)
     topics_text = st.session_state["topics_text"][idx]
-    topic_number = st.session_state["topic_number"][idx]
+    topic_number = int(st.session_state["topic_number"][idx])
     st.subheader(topics_text)
     
-    #뉴스링크 [날짜,언론사,헤드라인,URL]
+    #뉴스링크 [date,title,URL]
     news_list = requests.get(f"http://localhost:8001/news/{topic_number}").json()
     with st.expander("뉴스 링크"):
-        for idx in range(len(news_list['date'])):
-            col1, col2, col3 = st.columns([1,1,5])
-            col1.text(news_list['date'][idx])
-            col2.text(news_list['press'][idx])
-            col3.caption(f"<a href='{news_list['URL'][idx]}'>{news_list['headline'][idx]}</a>",unsafe_allow_html=True)
+        for news_idx in range(len(news_list['date'])):
+            col1, col2 = st.columns([1,5])
+            col1.text(news_list['date'][news_idx])
+            col2.caption(f"<a href='{news_list['url'][news_idx]}'>{news_list['title'][news_idx]}</a>",unsafe_allow_html=True)
         
-    
     #요약문
     st.subheader("요약문")
     summarization = requests.get(f"http://localhost:8001/summary/{topic_number}")

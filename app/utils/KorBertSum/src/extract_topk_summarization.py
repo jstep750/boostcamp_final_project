@@ -1,13 +1,12 @@
 """
     Main training workflow
 """
+from __future__ import division
 import os
 import sys
 from pathlib import Path
-ASSETS_DIR_PATH = os.path.join(Path(__file__).parent, "")
+ASSETS_DIR_PATH = os.path.abspath(os.path.join(Path(__file__).parent, os.pardir))
 sys.path.append(ASSETS_DIR_PATH)
-
-from __future__ import division
 
 import argparse
 import glob
@@ -36,15 +35,16 @@ from others.logging import logger, init_logger
 import easydict
 
 openapi_key = '9318dc23-24ac-4b59-a99e-a29ec170bf02'
+parent_dir = os.path.abspath(os.path.join(Path(__file__).parent, os.pardir))
 args = easydict.EasyDict({
     "encoder":'classifier',
     "mode":'summary',
-    "bert_data_path":'../bert_sample/korean',
-    "model_path":'../models/bert_classifier',
-    "bert_model":'../001_bert_morp_pytorch',
-    "result_path":'../results/korean',
+    "bert_data_path":os.path.join(parent_dir,'bert_sample/korean'),
+    "model_path":os.path.join(parent_dir,'models/bert_classifier'),
+    "bert_model":os.path.join(parent_dir,'001_bert_morp_pytorch'),
+    "result_path":os.path.join(parent_dir,'results/korean'),
     "temp_dir":'.',
-    "bert_config_path":'../001_bert_morp_pytorch/bert_config.json',
+    "bert_config_path":os.path.join(parent_dir,'001_bert_morp_pytorch/bert_config.json'),
     "batch_size":1000,
     "use_interval":True,
     "hidden_size":128,
@@ -66,8 +66,8 @@ args = easydict.EasyDict({
     "world_size":1,
     "visible_gpus":'0',
     "gpu_ranks":'0',
-    "log_file":'../logs/bert_classifier',
-    "test_from":'../models/bert_classifier2/model_step_35000.pt'
+    "log_file":os.path.join(parent_dir, "logs/bert_classifier"),
+    "test_from":os.path.join(parent_dir,"models/bert_classifier2/model_step_35000.pt")
 })
 init_logger(args.log_file)
 device = "cpu" if args.visible_gpus == '-1' else "cuda"
@@ -615,7 +615,7 @@ def extract_topk_summarization(news_df):
     model_flags = ['hidden_size', 'ff_size', 'heads', 'inter_layers','encoder','ff_actv', 'use_interval','rnn_size']
     
     
-    checkpoint = torch.load('../models/bert_classifier2/model_step_35000.pt', map_location=lambda storage, loc: storage)
+    checkpoint = torch.load(args.test_from, map_location=lambda storage, loc: storage)
     config = BertConfig.from_json_file(args.bert_config_path)
     model = Summarizer(args, device, load_pretrained_bert=False, bert_config = config)
     
@@ -630,6 +630,6 @@ def extract_topk_summarization(news_df):
     #news_df.to_pickle("para_extract_summary.pkl")
     return news_df
 if __name__ == "__main__":
-    news_df = pd.read_pickle("crwal_news_context.pkl")
+    news_df = pd.read_pickle("after_bertopic.pkl")
     extract_topk_summarization(news_df)
     
