@@ -16,11 +16,11 @@ import time
 app = FastAPI()
 
 # 뉴스 데이터프레임
-news_df = pd.DataFrame()
-topic_df = pd.DataFrame()
+app.news_df = None
+app.topic_df = None
 
 #크롤링부터 한줄요약까지
-@app.get("/company_name/")
+@app.post("/company_name/")
 def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int = 999) -> Dict:
     '''
     input:
@@ -32,8 +32,6 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
         Dict{"topics_number"(str) : 토픽 번호
              "topics_text"(str) : 토픽 한줄요약}
     '''
-    global news_df
-    global topic_df
     times=[0 for i in range(5)]
     times[0]= time.time()
     '''
@@ -49,17 +47,16 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     #2. 전처리
     print("extract context")
     news_df = extract_context(news_df)
-    news_df.to_csv(f"{company_name}_{date_gte}_{date_lte}_crwal_news_context.csv",index=False)
-    news_df.to_pickle(f"{company_name}_{date_gte}_{date_lte}_crwal_news_context.pkl")
+    #news_df.to_csv(f"{company_name}_{date_gte}_{date_lte}_crwal_news_context.csv",index=False)
+    #news_df.to_pickle(f"{company_name}_{date_gte}_{date_lte}_crwal_news_context.pkl")
     times[2] = time.time()
 
-    
     #3. 토픽 분류
     print("start divide topic")
     cfg = OmegaConf.load(f"./app/config/bertopic_config.yaml")
     news_df = bertopic_modeling(cfg, news_df)
-    #news_df.to_csv("after_bertopic.csv",index=False)
-    #news_df.to_pickle("after_bertopic.pkl")
+    #news_df.to_csv(f"{company_name}_after_bertopic_with_num.csv",index=False)
+    #news_df.to_pickle(f"{company_name}_after_bertopic_with_num.pkl")
     
     times[3] = time.time()
     #4. 한줄요약
@@ -72,51 +69,59 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
         now_news_df = news_df[news_df['topic']==topic_number]
         now_topic_df = summary_one_sent(topic_number,now_news_df)
         topic_df = pd.concat([topic_df,now_topic_df])
-    #topic_df.to_csv("topic_one_sent.csv",index = False)
-    #topic_df.to_pickle("topic_one_sent.pkl")
+    #topic_df.to_csv(f"{company_name}_topic_one_sent.csv",index = False)
+    #topic_df.to_pickle(f"{company_name}_topic_one_sent.pkl")
 
     times[4] = time.time()
     print("crwal_end")
     print(f'crawl : {times[1] - times[0]}\ncontext: {times[2]-times[1]}\n BERTtopic: {times[3]-times[2]}\n onesent: {times[4]-times[3]}')
     print(f'total time : {times[4]-times[0]} sec')
     '''
-    news_df = pd.read_pickle("after_bertopic.pkl")
-    topic_df = pd.read_pickle("topic_one_sent.pkl")
+    app.news_df = pd.read_pickle("after_bertopic.pkl")
+    app.topic_df = pd.read_pickle("topic_one_sent.pkl")
     #5. 한줄요약 반환 result df = ['topic','one_sent's] 
-    return {'topic': list(topic_df['topic']),'one_sent':list(topic_df['one_sent'])}
+    return {'topic': list(app.topic_df['topic']),'one_sent':list(app.topic_df['one_sent'])}
     
 # 문단요약
 @app.get("/summary/{topic_number}")
 def request_summary_news(topic_number):
-    global news_df
-    global topic_df
     #토픽 뉴스 수집
-    now_news_df = news_df[news_df['topic']==topic_number]
+    
+    now_news_df = app.news_df[app.news_df['topic'] == topic_number]
+    
     #전처리
 
     #문단요약
-    #topic_df = pd.concat([topic_df,extract_topk_summarization(news_df)])
-    #print(topic_df)
+    summary_text =""
+    print(now_news_df.index)
+    '''
+    for topk in extract_topk_summarization(now_news_df).loc[1,'topk']:
+        idx,text = topk
+        summary_text = summary_text + text
+        '''
+    print(summary_text)
     #return = 문단
-    return {"summarization":'''
-            편의점 GS25가 '원스피리츠'와 협업해 선보인 원소주 스피릿이 지난해 GS25에서 판매되는 모든 상품 중 매출 순위 7위를 기록했다고 17일 밝혔다.\n
-            원소주 스피릿은 출시 직후 2달 동안 입고 물량이 당일 완판되는 오픈런 행렬이 이어져 왔으며 최근 GS25와 원스피리츠의 공급 안정화 노력에 따라 모든 점포에서 수량제한 없이 상시 구매가 가능해졌다.\n
-            GS25는 오는 18일 원소주 스피릿 누적 판매량 400만 병 돌파 기념으로 상시 운영되는 1개입 전용 패키지를 선보여 상품의 프리미엄을 더하기로 했다.
-            '''}
+    return {"summarization":summary_text}
     
 
 # 뉴스 리스트 출력
 @app.get("/news/{topic_number}")
 def request_summary_news(topic_number):
-    global news_df
-    global topic_df
     #토픽 뉴스 수집
-    now_news_df = news_df[news_df['topic']==topic_number]
+    now_news_df = app.news_df[app.news_df['topic'] == int(topic_number)]
+    #print(len(now_news_df))
     #return = [날짜, 언론사, 헤드라인, url]
+    '''
+    return {"date":['20220101'],
+            "title":['s'],
+            "url":['s']
+            }
+    '''
     return {"date":list(now_news_df['date']),
             "title":list(now_news_df['title']),
             "url":list(now_news_df['url'])
             }
+    
 
 
 # 키워드 출력

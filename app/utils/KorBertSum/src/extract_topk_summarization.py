@@ -6,6 +6,7 @@ import os
 import sys
 from pathlib import Path
 ASSETS_DIR_PATH = os.path.abspath(os.path.join(Path(__file__).parent, os.pardir))
+print(ASSETS_DIR_PATH)
 sys.path.append(ASSETS_DIR_PATH)
 
 import argparse
@@ -22,8 +23,8 @@ from pytorch_pretrained_bert import BertConfig
 
 from tqdm import tqdm
 import distributed
-from models import data_loader, model_builder
-from models.data_loader import load_dataset
+#from models import data_loader, model_builder
+from .models.data_loader import load_dataset
 from models.model_builder import Summarizer
 from tensorboardX import SummaryWriter
 from models.reporter import ReportMgr
@@ -350,7 +351,7 @@ class Trainer(object):
             self.model_saver.maybe_save(step)
 
             
-def summary(args, b_list, device_id, pt, step, model):
+def summary(args, b_list, device_id, pt, step, model,checkpoint,model_flags):
 
     device = "cpu" if args.visible_gpus == '-1' else "cuda"
     if (pt != ''):
@@ -566,7 +567,6 @@ def News_to_input(text, openapi_key, tokenizer):
     bertdata = BertData(tokenizer)
     sent_labels = [0] * len(news)
     tmp = bertdata.preprocess(news)
-    #print(tmp)
     b_data_dict = {"src":tmp[0],
                "tgt": [0],
                "labels":[0,0,0],
@@ -579,9 +579,9 @@ def News_to_input(text, openapi_key, tokenizer):
     b_list.append(b_data_dict) 
     return b_list
     
-def get_topk_sentences(k, user_input, model, tokenizer):
+def get_topk_sentences(k, user_input, model, tokenizer,checkpoint,model_flags):
     bot_input_ids = News_to_input(user_input, openapi_key, tokenizer)
-    chat_history_ids = summary(args, bot_input_ids, device_id, '', None, model)
+    chat_history_ids = summary(args, bot_input_ids, device_id, '', None, model,checkpoint,model_flags)
     pred_lst = list(chat_history_ids[0][:k])
     final_text = []
     for i,a in enumerate(user_input.split('.')):
@@ -592,12 +592,12 @@ def get_topk_sentences(k, user_input, model, tokenizer):
     return final_text
 
 
-def add_topk_to_df(df, model, tokenizer):
+def add_topk_to_df(df, model, tokenizer,checkpoint,model_flags):
     start = time.time()
     topk = []
     for i,context in enumerate(tqdm(df['context'])):
         top = None
-        top = get_topk_sentences(len(context)//4+1, ' '.join(context), model, tokenizer)
+        top = get_topk_sentences(len(context)//4+1, ' '.join(context), model, tokenizer,checkpoint,model_flags)
         if(top):
             topk.append(top)
         else:
@@ -609,7 +609,8 @@ def add_topk_to_df(df, model, tokenizer):
     return df
 
 def extract_topk_summarization(news_df):
-    args.gpu_ranks = [int(i) for i in args.gpu_ranks.split(',')]
+    #args.gpu_ranks = [int(i) for i in args.gpu_ranks.split(',')]
+    args.gpu_ranks = [0]
     os.environ["CUDA_VISIBLE_DEVICES"] = args.visible_gpus
 
     model_flags = ['hidden_size', 'ff_size', 'heads', 'inter_layers','encoder','ff_actv', 'use_interval','rnn_size']
@@ -625,11 +626,14 @@ def extract_topk_summarization(news_df):
     vocab = get_kobert_vocab()
     tokenizer = nlp.data.BERTSPTokenizer(get_tokenizer(), vocab, lower=False)
 
-    news_df = add_topk_to_df(news_df,model, tokenizer)
+    news_df = add_topk_to_df(news_df,model, tokenizer,checkpoint,model_flags)
     #news_df.to_csv("para_extract_summary.csv",index=False)
     #news_df.to_pickle("para_extract_summary.pkl")
     return news_df
+
 if __name__ == "__main__":
     news_df = pd.read_pickle("after_bertopic.pkl")
+    news_df = news_df[news_df['topic'] == 0]
     extract_topk_summarization(news_df)
+
     

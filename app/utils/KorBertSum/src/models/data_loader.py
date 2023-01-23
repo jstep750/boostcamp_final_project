@@ -3,6 +3,11 @@ import glob
 import random
 
 import torch
+import os
+import sys
+from pathlib import Path
+ASSETS_DIR_PATH = os.path.abspath(os.path.join(Path(__file__).parent, os.pardir))
+sys.path.append(ASSETS_DIR_PATH)
 
 from others.logging import logger
 
