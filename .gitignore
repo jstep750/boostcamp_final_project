@@ -174,3 +174,4 @@ poetry.toml
 app/utils/KorBertSum/001_bert_morp_pytorch/
 
 app/utils/KorBertSum/models/bert_classifier2/
+app/utils/KorBertSum/models/bert_classifier/
