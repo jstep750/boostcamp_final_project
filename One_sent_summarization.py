@@ -29,7 +29,6 @@ class SummaryGenerater():
         self.tokenizer = tokenizer
         self.model.to(device)
         
-    
     def concat_title_context(self, df):
         df = self.df
         add_title_context = []
@@ -59,7 +58,9 @@ class SummaryGenerater():
             # print("================")
             # print(topic_n, summary_text)
             # print(f'{(time.time() - s):0.2f} sec')
-        return summary_dict
+        summary_df = pd.DataFrame(data={'topic': summary_dict.keys(),
+                                        'one_sent': summary_dict.values()})
+        return summary_df
     
     
 SG = SummaryGenerater(model, tokenizer)
