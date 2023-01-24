@@ -19,6 +19,10 @@ streamlit run main.py --server.port 30001
 
 ------
 feat_front readme
+# requirement
+```
+pip install -r app/requirements.txt
+```
 
 # Frontend 실행
 final-project-level3-nlp-05 폴더 내에서 `streamlit run frontend/main.py --server.port=30001` 실행
