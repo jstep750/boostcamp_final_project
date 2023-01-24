@@ -10,7 +10,10 @@ pip install cupy-cuda11x
 pip install cuml-cu11 --extra-index-url=https://pypi.ngc.nvidia.com
 pip install cupy-cuda110
 ```
-
+# KoBert 사용
+```
+pip install git+https://git@github.com/SKTBrain/KoBERT.git@master
+```
 # 파일 구성
 ```
 📁app
