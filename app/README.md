@@ -4,6 +4,13 @@ final-project-level3-nlp-05 폴더 내에서 `streamlit run frontend/main.py --s
 # Backend 실행
 final-project-level3-nlp-05 폴더 내에서 `python -m app` 실행
 
+# 버토픽 gpu에서 실행하기
+```
+pip install cupy-cuda11x
+pip install cuml-cu11 --extra-index-url=https://pypi.ngc.nvidia.com
+pip install cupy-cuda110
+```
+
 # 파일 구성
 ```
 📁app
