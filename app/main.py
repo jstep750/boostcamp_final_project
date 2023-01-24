@@ -1,9 +1,14 @@
 from fastapi import FastAPI
+from fastapi import Response
 import requests
 
+import json
 import pandas as pd
-from typing import Dict
+from typing import Dict, Union
 from collections import defaultdict
+import time
+from pydantic import BaseModel
+from fastapi.encoders import jsonable_encoder
 
 from omegaconf import OmegaConf
 from app.utils.NaverCrawl.navercrawl import naver_crawl
@@ -12,16 +17,12 @@ from app.utils.BERTopic.bertopic_model import bertopic_modeling
 from app.utils.Extract_context import extract_context
 from app.utils.One_sent_summarization import summary_one_sent
 from app.utils.KorBertSum.src.extract_topk_summarization import extract_topk_summarization
-import time
-app = FastAPI()
 
-# 뉴스 데이터프레임
-app.news_df = None
-app.topic_df = None
+app = FastAPI()
 
 #크롤링부터 한줄요약까지
 @app.post("/company_name/")
-def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int = 999) -> Dict:
+def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int = 999) -> Response:
     '''
     input:
         company_name(str): 검색어
@@ -29,8 +30,8 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
         date_lte(int): 종료일
         news_num(int): 검색 뉴스 수
     output:
-        Dict{"topics_number"(str) : 토픽 번호
-             "topics_text"(str) : 토픽 한줄요약}
+        Dict{"news_df"(pd.DataFrame) : 뉴스 dataframe
+             "topic_df"(pd.DataFrame) : 토픽 dataframe}
     '''
     times=[0 for i in range(5)]
     times[0]= time.time()
@@ -77,18 +78,16 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     print(f'crawl : {times[1] - times[0]}\ncontext: {times[2]-times[1]}\n BERTtopic: {times[3]-times[2]}\n onesent: {times[4]-times[3]}')
     print(f'total time : {times[4]-times[0]} sec')
     '''
-    app.news_df = pd.read_pickle("after_bertopic.pkl")
-    app.topic_df = pd.read_pickle("topic_one_sent.pkl")
-    #5. 한줄요약 반환 result df = ['topic','one_sent's] 
-    return {'topic': list(app.topic_df['topic']),'one_sent':list(app.topic_df['one_sent'])}
+    news_df = pd.read_pickle("after_bertopic.pkl")
+    topic_df = pd.read_pickle("topic_one_sent.pkl")
+    #5. 한줄요약 반환 result df = ['topic','one_sent's]  
+    result = json.dumps({"news_df": news_df.to_json(orient = "records",force_ascii=False) ,"topic_df": topic_df.to_json(orient = "records",force_ascii=False)})   
+    return Response(result, media_type="application/json")
+    #return {'topic': list(app.topic_df['topic']),'one_sent':list(app.topic_df['one_sent'])}
     
 # 문단요약
-@app.get("/summary/{topic_number}")
-def request_summary_news(topic_number):
-    #토픽 뉴스 수집
-    
-    now_news_df = app.news_df[app.news_df['topic'] == topic_number]
-    
+@app.post("/summary/{topic_number}")
+def request_summary_news(now_news_df):    
     #전처리
 
     #문단요약
@@ -103,7 +102,7 @@ def request_summary_news(topic_number):
     #return = 문단
     return {"summarization":summary_text}
     
-
+'''
 # 뉴스 리스트 출력
 @app.get("/news/{topic_number}")
 def request_summary_news(topic_number):
@@ -111,18 +110,12 @@ def request_summary_news(topic_number):
     now_news_df = app.news_df[app.news_df['topic'] == int(topic_number)]
     #print(len(now_news_df))
     #return = [날짜, 언론사, 헤드라인, url]
-    '''
-    return {"date":['20220101'],
-            "title":['s'],
-            "url":['s']
-            }
-    '''
     return {"date":list(now_news_df['date']),
             "title":list(now_news_df['title']),
             "url":list(now_news_df['url'])
             }
     
-
+'''
 
 # 키워드 출력
 @app.get("/keyword/{topic_number}")

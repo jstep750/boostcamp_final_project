@@ -1,6 +1,8 @@
 import requests
 import datetime 
 
+import json
+import pandas as pd
 import streamlit as st
 from streamlit.components.v1 import html
 
@@ -37,8 +39,8 @@ st.markdown("""
                 </html>
             """, unsafe_allow_html=True)
 
-def button_click(idx):
-    st.wirte(idx)
+with open("frontend/style.css") as source_css:
+        st.markdown(f"<style>{source_css.read()}</style>",unsafe_allow_html=True)
 
 #검색페이지
 def search_page():    
@@ -46,8 +48,7 @@ def search_page():
     st.markdown("<h1 style='text-align: center;'>NEWSUMMARY</h1>", unsafe_allow_html=True)
     search_contain = st.empty()
     news_contain = st.empty()
-    with open("app/style.css") as source_css:
-        st.markdown(f"<style>{source_css.read()}</style>",unsafe_allow_html=True)
+    
     if 'company_name' not in st.session_state:
         st.session_state.company_name = ""
     if 'before_company_name' not in st.session_state:
@@ -69,48 +70,50 @@ def search_page():
                 # 회사이름 검색 요청
                 response = requests.post(f"http://localhost:8001/company_name/?company_name={st.session_state.company_name}&date_gte={start_date}&date_lte={end_date}&news_num=999")
                 response = response.json()
-                st.session_state["topic_number"] = response['topic']
-                st.session_state["topics_text"] = response['one_sent']
-            #버튼 추가   
-            for idx in range(int(len(st.session_state["topic_number"]) / 2)):                
+                news_df = pd.read_json(response["news_df"],orient="records")
+                topic_df = pd.read_json(response["topic_df"],orient="records")
+                st.session_state["news_df"] = news_df
+                st.session_state["topic_df"] = topic_df
+            
+            #버튼 추가  
+            max_idx = len(st.session_state["topic_df"]) 
+            for idx in range(int(max_idx / 2)):                
                 col1, col2 = st.columns([1,1])
-                topic_number = st.session_state["topic_number"][idx * 2]
-                topic_text = st.session_state["topics_text"][idx * 2]
+                topic_number = st.session_state["topic_df"]["topic"][idx * 2]
+                topic_text = st.session_state["topic_df"]["one_sent"][idx * 2]
                 if len(topic_text) > 60:
                     topic_text = topic_text[0:60] + "..."
                 col1.button(topic_text,key=idx * 2)
                 page_buttons.append(idx * 2)
 
-                topic_number = st.session_state["topic_number"][idx * 2 + 1]
-                topic_text = st.session_state["topics_text"][idx * 2 + 1]
+                topic_number = st.session_state["topic_df"]["topic"][idx * 2 + 1]
+                topic_text = st.session_state["topic_df"]["one_sent"][idx * 2 + 1]
                 if len(topic_text) > 60:
                     topic_text = topic_text[0:60] + "..."
                 col2.button(topic_text,key=idx * 2 + 1)
                 page_buttons.append(idx * 2 + 1)
-                
             
-            if len(st.session_state["topic_number"]) % 2 == 1:
+            if max_idx % 2 == 1:
                 col1, col2 = st.columns([1,1])
-                topic_number = st.session_state["topic_number"][-1]
-                topic_text = st.session_state["topics_text"][-1]
+                topic_number = st.session_state["topic_df"]["topic"][max_idx - 1]
+                topic_text = st.session_state["topic_df"]["one_sent"][max_idx - 1]
                 if len(topic_text) > 60:
                     topic_text = topic_text[0:60] + "..."
-                col1.button(topic_text,key=len(st.session_state["topic_number"]) -1)
-                page_buttons.append(len(st.session_state["topic_number"])-1)
-    
+                col1.button(topic_text,key=max_idx - 1)
+                page_buttons.append(max_idx - 1)
+    # 요약문 누르면 해당 페이지로
     for button_key in page_buttons:
         if st.session_state[button_key]:
             search_contain.empty()
             with news_contain.container():
                 news_page(button_key)
-    #st.write(st.session_state)
-                
+    
 
 #뉴스 요약 페이지
 def news_page(idx):
     #한줄요약(제목)
-    topics_text = st.session_state["topics_text"][idx]
-    topic_number = int(st.session_state["topic_number"][idx])
+    topics_text = st.session_state["topic_df"]["one_sent"][idx]
+    topic_number = int(st.session_state["topic_df"]["topic"][idx])
     st.subheader(topics_text)
     _, col2 = st.columns([7,1])
     back_button = col2.button("back")
@@ -119,18 +122,20 @@ def news_page(idx):
         news_contain.empty()
 
     #뉴스링크 [date,title,URL]
-    news_list = requests.get(f"http://localhost:8001/news/{topic_number}").json()
+    #news_list = requests.get(f"http://localhost:8001/news/{topic_number}").json()
+    news_df = st.session_state["news_df"]
+    news_list = news_df[news_df['topic'] == topic_number]
     with st.expander("뉴스 링크"):
-        for news_idx in range(len(news_list['date'])):
+        for _, row in news_list[:10].iterrows():
             col1, col2 = st.columns([1,5])
-            col1.text(news_list['date'][news_idx])
-            col2.caption(f"<a href='{news_list['url'][news_idx]}'>{news_list['title'][news_idx]}</a>",unsafe_allow_html=True)
+            col1.text(row['date'])
+            col2.caption(f"<a href='{row['url']}'>{row['title']}</a>",unsafe_allow_html=True)
+            
     
    
-
     #요약문
     st.subheader("요약문")
-    summarization = requests.get(f"http://localhost:8001/summary/{topic_number}")
+    summarization = requests.post(f"http://localhost:8001/summary/{topic_number}",now_news_df={news_df})
     st.write(summarization.json()["summarization"])
     #키워드
     st.subheader("키워드")
