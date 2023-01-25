@@ -1,32 +1,25 @@
-import re
+import argparse
+import os
+import sys
 import time
+from pathlib import Path
 from typing import List
 
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
+import networkx as nx
 import numpy as np
 import pandas as pd
 from bertopic import BERTopic
-from bertopic.vectorizers import ClassTfidfTransformer
-from hdbscan import HDBSCAN
+from cuml.cluster import HDBSCAN
+from cuml.manifold import UMAP
 from konlpy.tag import Mecab
-
-from sentence_transformers import SentenceTransformer
+from omegaconf import OmegaConf
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import normalize
-from tqdm import tqdm
-from umap import UMAP
-import networkx as nx
 
-import argparse
-from omegaconf import OmegaConf
-
-import os
-import sys
-from pathlib import Path
 ASSETS_DIR_PATH = os.path.join(Path(__file__).parent, "")
 sys.path.append(ASSETS_DIR_PATH)
 from bertopic_preprocessing import *
+
 
 class CustomTokenizer:
     def __init__(self, tagger, stopwords):
@@ -34,7 +27,6 @@ class CustomTokenizer:
         self.stopwords = stopwords
 
     def __call__(self, sent):
-        # sent = sent[:1000000] # if Error?
         word_tokens = self.tagger.morphs(sent)
         result = [
             word for word in word_tokens if len(word) > 1 and word not in self.stopwords
@@ -42,7 +34,6 @@ class CustomTokenizer:
         return result
 
 def concat_title_context(df):
-    # df = self.df
     add_title_context = []
     for _, t in df.iterrows():
         context = [t['title']] + t['context'][0:2]
@@ -84,10 +75,8 @@ def screened_articles(df, threshold=0.3):
 
 def bertopic_modeling(cfg ,df: pd.DataFrame) -> pd.DataFrame:
     """_summary_
-
     Args:
         df (pd.DataFrame): _description_
-
     Returns:
         pd.DataFrame: _description_
     """
@@ -108,8 +97,16 @@ def bertopic_modeling(cfg ,df: pd.DataFrame) -> pd.DataFrame:
     custom_tokenizer = CustomTokenizer(Mecab(), ko_stop_words)
     vectorizer = CountVectorizer(tokenizer=custom_tokenizer, max_features=3000)
 
+    # Create instances of GPU-accelerated UMAP and HDBSCAN
+    umap_model = UMAP(n_neighbors=15, n_components=5, min_dist=0.0, metric='cosine')
+    hdbscan_model = HDBSCAN(min_cluster_size=8, metric='euclidean', 
+                            cluster_selection_method='eom', prediction_data=True)
+
+
     model = BERTopic(
         embedding_model = model_cfg.model_name,
+        umap_model=umap_model,
+        hdbscan_model=hdbscan_model,
         vectorizer_model = vectorizer,
         top_n_words = model_cfg.top_n_words,
         # nr_topics = model_cfg.nr_topics,
@@ -120,21 +117,19 @@ def bertopic_modeling(cfg ,df: pd.DataFrame) -> pd.DataFrame:
     start = time.time()
     topics, probs = model.fit_transform(docs)
     if np.sum(probs) == 0 :
-        # TF-IDF vectorizer 진행
+        # CountVectorizer 진행
         X = vectorizer.fit_transform(docs)
 
         # l2 정규화
         X = normalize(X)
 
         # hdbscan 알고리즘 적용
-        cluster = HDBSCAN(algorithm='best', alpha=1.0, approx_min_span_tree=True,
-                          gen_min_span_tree=True, leaf_size=40,metric='euclidean', 
-                          min_cluster_size=2, min_samples=None, p=None)
-
+        cluster = HDBSCAN(min_cluster_size=2, metric='euclidean', 
+                            cluster_selection_method='eom', prediction_data=True)
+    
         # trained labels 
-        topics = cluster.fit_predict(X)
+        topics = cluster.fit_predict(X.toarray())
         topics = [t + 1 for t in topics]
-        print(topics)
     
     else : 
         topic_distr, _ = model.approximate_distribution(docs, window=4, stride=1, min_similarity=0.1, 
@@ -151,7 +146,6 @@ def bertopic_modeling(cfg ,df: pd.DataFrame) -> pd.DataFrame:
 
     new_topics = pd.Series(topics, name='topic')
     bertopic_df = pd.concat([df, new_topics], axis=1)
-    
 
     output_df = screened_articles(bertopic_df, threshold=0.3)
 
@@ -165,7 +159,8 @@ if __name__ == "__main__":
     args, _ = parser.parse_known_args()
     cfg = OmegaConf.load(f"./{args.config}.yaml")
 
-    input_df = pd.read_pickle("./윤석열_20221201_20221203_crwal_news_context.pkl")
+    # input_df = pd.read_pickle("./윤석열_20221201_20221203_crwal_news_context.pkl")
+    input_df = pd.read_pickle("./윤석열_20221201_20221215_crwal_news_context.pkl")    
     print(input_df)
 
     print("=" * 100)
