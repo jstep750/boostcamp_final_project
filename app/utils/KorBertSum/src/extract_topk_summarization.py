@@ -83,7 +83,7 @@ args = easydict.EasyDict({
     "log_file":os.path.join(parent_dir, "logs/bert_classifier"),
     "test_from":os.path.join(parent_dir,"bert_models/bert_classifier2/model_step_35000.pt")
 })
-init_logger(args.log_file)
+#init_logger(args.log_file)
 device = "cpu" if args.visible_gpus == '-1' else "cuda"
 device_id = 0 if device == "cuda" else -1
 
@@ -116,13 +116,13 @@ def build_trainer(args, device_id, model,
 
     #print('gpu_rank %d' % gpu_rank)
 
-    tensorboard_log_dir = args.model_path
+    #tensorboard_log_dir = args.model_path
 
-    writer = SummaryWriter(tensorboard_log_dir, comment="Unmt")
+    #writer = SummaryWriter(tensorboard_log_dir, comment="Unmt")
 
-    report_manager = ReportMgr(args.report_every, start_time=-1, tensorboard_writer=writer)
+    #report_manager = ReportMgr(args.report_every, start_time=-1, tensorboard_writer=writer)
 
-    trainer = Trainer(args, model, optim, grad_accum_count, n_gpu, gpu_rank, report_manager)
+    trainer = Trainer(args, model, optim, grad_accum_count, n_gpu, gpu_rank)#, report_manager
 
     # print(tr)
     if (model):
@@ -415,8 +415,8 @@ def do_lang ( openapi_key, text ) :
     if json_result == -1:
         json_reason = json_data["reason"]
         if "Invalid Access Key" in json_reason:
-            logger.info(json_reason)
-            logger.info("Please check the openapi access key.")
+            #logger.info(json_reason)
+            #logger.info("Please check the openapi access key.")
             sys.exit()
         return "openapi error - " + json_reason
     else:
@@ -432,7 +432,7 @@ def do_lang ( openapi_key, text ) :
 
         return return_result
 
-def get_kobert_vocab(cachedir="./tmp/"):
+def get_kobert_vocab(cachedir=os.path.join(parent_dir,"tmp/")):
     # Add BOS,EOS vocab
     tokenizer = {
         "url": "s3://skt-lsl-nlp-model/KoBERT/tokenizers/kobert_news_wiki_ko_cased-1087f8699e.spiece",
@@ -651,19 +651,19 @@ def add_topk_to_df(df, model, tokenizer,checkpoint,model_flags):
     
     start = time.time()
     topk = []
-    for i,context2 in enumerate(tqdm(df['context'])):
+    for i,context in enumerate(tqdm(df['context'])):
         #context2 = eval(context2)
+        '''
         context = []
         for s in context2:
             if(len(s) > 600):
                 s = s.split('.')[0]+' '
             if(len(s) < 600):
                 context.append(s)
-        
+        '''
         context = context[:30]
         top = None
-        if(len(context) > 4):
-            top = get_top_sentences(' '.join(context), model, tokenizer,checkpoint,model_flags)
+        top = get_top_sentences(' '.join(context), model, tokenizer,checkpoint,model_flags)
         if(top):
             topk.append(top)
         else:
