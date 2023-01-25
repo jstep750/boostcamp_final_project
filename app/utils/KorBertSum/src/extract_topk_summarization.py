@@ -588,7 +588,7 @@ openapi_key = '9318dc23-24ac-4b59-a99e-a29ec170bf02'
 import re
 from nltk import word_tokenize, sent_tokenize
 import nltk
-nltk.download('punkt')
+#nltk.download('punkt')
 
 def clean_byline(text):
     # byline
@@ -703,11 +703,9 @@ def extract_topk_summarization(news_df):
     topic_df.to_csv(f"final_after_extract_topk.csv",index = False)
     topic_df.to_pickle(f"final_after_extract_topk.pkl")
     return  topic_df#[topic, context, topk]
-def extract_topk_summarization2(news_df):
-    topic_df = pd.read_pickle("final_after_extract_topk.pkl")
-    return  topic_df#[topic, context, topk]
+    
 if __name__ == '__main__':
-    news_df = pd.read_pickle("after_bertopic.pkl")
+    news_df = pd.read_pickle("final_after_extract_topk.pkl")
     topic_df = extract_topk_summarization(news_df)
     topic_df.to_csv(f"after_extract_topk.csv",index = False)
     topic_df.to_pickle(f"after_extract_topk.pkl")

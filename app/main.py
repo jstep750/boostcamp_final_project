@@ -10,12 +10,10 @@ from pydantic import BaseModel
 from fastapi.encoders import jsonable_encoder
 
 from omegaconf import OmegaConf
-from app.utils.NaverCrawl.navercrawl import naver_crawl
 from app.utils.Bigkindscrawl import bigkinds_crawl
 from app.utils.BERTopic.bertopic_model import bertopic_modeling
-from app.utils.Extract_context import extract_context
 from app.utils.One_sent_summarization import summary_one_sent
-from app.utils.KorBertSum.src.extract_topk_summarization import extract_topk_summarization, extract_topk_summarization2
+from app.utils.KorBertSum.src.extract_topk_summarization import extract_topk_summarization
 from app.utils.KorBertSum.src.topic_summary import make_summary_paragraph
 
 app = FastAPI()
@@ -41,7 +39,6 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     print("crawl news")
     news_df = bigkinds_crawl(company_name,date_gte,date_lte) # news_df = ['title','description','url','date']
     times[1] = time.time()
-    
     #3. 토픽 분류
     print("start divide topic")
     cfg = OmegaConf.load(f"./app/config/bertopic_config.yaml")
@@ -52,7 +49,7 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     print("summary one sentence")
     topic_df = summary_one_sent(news_df)
     times[3] = time.time()
-    
+
     print("crwal_end")
     print(f'crawl : {times[1] - times[0]}\n BERTtopic: {times[2]-times[1]}\n onesent: {times[3]-times[2]}')
     print(f'total time : {times[3]-times[0]} sec')
@@ -68,11 +65,16 @@ async def request_summary_news(request:Request):
     summary_text = ""
     if body_bytes:
         news_json = await request.json()
-        now_news_df = pd.read_json(news_json,orient="columns") 
+        now_news_df = pd.read_json(news_json,orient="columns")
+        times=[0 for i in range(3)]    
+        times[0]= time.time()
         #추출요약
-        summary_df = extract_topk_summarization2(now_news_df)
+        summary_df = extract_topk_summarization(now_news_df)
+        times[1]= time.time()
         #생성요약
         summary_text = make_summary_paragraph(summary_df)
+        times[2]= time.time()
+        print(f"extract time : {times[1]-times[0]} sec \nparagraph time : {times[2]-times[1]} sec")
     return {"summarization":summary_text}
     
 # 키워드 출력

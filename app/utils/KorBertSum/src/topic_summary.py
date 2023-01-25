@@ -11,7 +11,7 @@ from transformers import PreTrainedTokenizerFast
 from transformers import BartForConditionalGeneration
 import random
 from itertools import combinations
-nltk.download('wordnet')
+#nltk.download('wordnet')
 
 tokenizer = PreTrainedTokenizerFast.from_pretrained('digit82/kobart-summarization')
 model = BartForConditionalGeneration.from_pretrained('digit82/kobart-summarization')

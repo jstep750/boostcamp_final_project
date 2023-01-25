@@ -25,3 +25,8 @@ div.appview-container.css-1wrcr25.egzxvld6{
 div.css-1offfwp.e16nr0p34{
     align-items:left;
 }
+div.summarization-news{
+    border: 1px solid black;
+    border-radius: 10px;
+    word-break:break-all
+}

@@ -7,6 +7,8 @@ from streamlit.components.v1 import html
 
 from confirm_button_hack import cache_on_button_press
 
+import re
+
 #페이지 타이틀
 st.set_page_config(page_title="News Summarization",layout = 'wide')
 st.markdown("""
@@ -136,11 +138,10 @@ def news_page(idx):
     now_news_df = news_list[['context']]
     now_news_json = now_news_df.to_json(orient = "columns",force_ascii=False)
     summarization = requests.post(f"http://localhost:8001/summary/",json=now_news_json)
-    st.write(summarization.json()["summarization"])
+    summary_text = summarization.json()["summarization"]
+    st.write(summary_text)
     #키워드
     st.subheader("키워드")
-    
-    
     
 
 if __name__ == '__main__':

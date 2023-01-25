@@ -8,7 +8,7 @@ from tqdm import tqdm
 from newspaper import Article
 import time
 import nltk
-nltk.download('punkt')
+#nltk.download('punkt')
 
 def context(x):
     try:
