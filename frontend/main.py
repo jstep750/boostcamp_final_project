@@ -1,15 +1,11 @@
 import requests
 import datetime 
-from pydantic import BaseModel
 import json
 import pandas as pd
 import streamlit as st
 from streamlit.components.v1 import html
 
 from confirm_button_hack import cache_on_button_press
-
-class JsonData(BaseModel):
-    user: str
 
 #페이지 타이틀
 st.set_page_config(page_title="News Summarization",layout = 'wide')
@@ -125,22 +121,21 @@ def news_page(idx):
         page_buttons.clear()
         news_contain.empty()
 
-    #뉴스링크 [date,title,URL]
-    #news_list = requests.get(f"http://localhost:8001/news/{topic_number}").json()
+    #뉴스링크 [date,title,url]
     news_df = st.session_state["news_df"]
     news_list = news_df[news_df['topic'] == topic_number]
+    news_list = news_list.reset_index(drop=True)
     with st.expander("뉴스 링크"):
-        for _, row in news_list[:10].iterrows():
+        for _, row in news_list[:12].iterrows():
             col1, col2 = st.columns([1,5])
             col1.text(row['date'])
             col2.caption(f"<a href='{row['url']}'>{row['title']}</a>",unsafe_allow_html=True)    
    
     #요약문
     st.subheader("요약문")
-    now_news_df = news_df[['context','topic']]
-    now_news_json = now_news_df.to_json(orient = "records",force_ascii=False)
-    #summarization = requests.get(f"http://localhost:8001/summary/{topic_number}")
-    summarization = requests.put(f"http://localhost:8001/summary/{topic_number}",json=now_news_json)
+    now_news_df = news_list[['context']]
+    now_news_json = now_news_df.to_json(orient = "columns",force_ascii=False)
+    summarization = requests.post(f"http://localhost:8001/summary/",json=now_news_json)
     st.write(summarization.json()["summarization"])
     #키워드
     st.subheader("키워드")

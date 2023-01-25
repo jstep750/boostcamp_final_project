@@ -16,9 +16,6 @@ from omegaconf import OmegaConf
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import normalize
 
-from cuml.cluster import HDBSCAN
-from cuml.manifold import UMAP
-
 ASSETS_DIR_PATH = os.path.join(Path(__file__).parent, "")
 sys.path.append(ASSETS_DIR_PATH)
 from bertopic_preprocessing import *
@@ -100,6 +97,12 @@ def bertopic_modeling(cfg ,df: pd.DataFrame) -> pd.DataFrame:
     custom_tokenizer = CustomTokenizer(Mecab(), ko_stop_words)
     vectorizer = CountVectorizer(tokenizer=custom_tokenizer, max_features=3000)
 
+    # Create instances of GPU-accelerated UMAP and HDBSCAN
+    umap_model = UMAP(n_neighbors=15, n_components=5, min_dist=0.0, metric='cosine')
+    hdbscan_model = HDBSCAN(min_cluster_size=8, metric='euclidean', 
+                            cluster_selection_method='eom', prediction_data=True)
+
+
     model = BERTopic(
         embedding_model = model_cfg.model_name,
         umap_model=umap_model,
@@ -142,6 +145,7 @@ def bertopic_modeling(cfg ,df: pd.DataFrame) -> pd.DataFrame:
     print(f"{end - start:.5f} sec")
 
     new_topics = pd.Series(topics, name='topic')
+    df = df.reset_index(drop=True)
     bertopic_df = pd.concat([df, new_topics], axis=1)
 
     output_df = screened_articles(bertopic_df, threshold=0.3)

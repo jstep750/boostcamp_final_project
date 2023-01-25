@@ -6,7 +6,6 @@ import os
 import sys
 from pathlib import Path
 ASSETS_DIR_PATH = os.path.abspath(os.path.join(Path(__file__).parent, os.pardir))
-print(ASSETS_DIR_PATH)
 sys.path.append(ASSETS_DIR_PATH)
 import argparse
 import glob
