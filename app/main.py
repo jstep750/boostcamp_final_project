@@ -41,8 +41,8 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     times[1] = time.time()
     #3. 토픽 분류
     print("start divide topic")
-    cfg = OmegaConf.load(f"./app/config/bertopic_config.yaml")
-    news_df = bertopic_modeling(cfg, news_df)
+    #cfg = OmegaConf.load(f"./app/config/bertopic_config.yaml")
+    news_df = bertopic_modeling(news_df)
     times[2] = time.time()
 
     #4. 한줄요약

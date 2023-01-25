@@ -105,7 +105,6 @@ def search_page():
                 topic_text = st.session_state["topic_df"]["one_sent"][max_idx - 1]
                 if len(topic_text) > 60:
                     topic_text = topic_text[0:60] + "..."
-                topic_text = f"<font size =\"2\">**{topic_text}**</font>"
                 col1.button(topic_text,key=max_idx - 1)
                 page_buttons.append(max_idx - 1)
     # 요약문 누르면 해당 페이지로

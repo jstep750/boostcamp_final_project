@@ -73,13 +73,14 @@ def screened_articles(df, threshold=0.3):
         indexes += list(idx[article_idx])
     return df.iloc[indexes]
 
-def bertopic_modeling(cfg ,df: pd.DataFrame) -> pd.DataFrame:
+def bertopic_modeling(df: pd.DataFrame) -> pd.DataFrame:
     """_summary_
     Args:
         df (pd.DataFrame): _description_
     Returns:
         pd.DataFrame: _description_
     """
+    cfg = OmegaConf.load(os.path.join(ASSETS_DIR_PATH,"bertopic_config.yaml"))
     file_cfg = cfg.file
     model_cfg = cfg.model 
 
@@ -158,14 +159,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="bertopic_config")
     args, _ = parser.parse_known_args()
-    cfg = OmegaConf.load(f"./{args.config}.yaml")
+    #cfg = OmegaConf.load(f"./{args.config}.yaml")
 
     # input_df = pd.read_pickle("./윤석열_20221201_20221203_crwal_news_context.pkl")
     input_df = pd.read_pickle("./윤석열_20221201_20221215_crwal_news_context.pkl")    
     print(input_df)
 
     print("=" * 100)
-    output_df = bertopic_modeling(cfg, input_df)
+    output_df = bertopic_modeling(input_df)
     output_df.to_csv("result.csv", index=False)
     print(cfg)
     print(output_df)
