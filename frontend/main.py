@@ -64,7 +64,7 @@ def search_page():
         company_name = st.text_input("검색", value=st.session_state['company_name'], placeholder ="회사명 입력",label_visibility='collapsed', key="company_name")
         #기간 검색창
         _, col2 = st.columns([5,2])
-        search_date = col2.date_input("기간",value=(datetime.date(2022,12,1), datetime.date(2022,12,15)),label_visibility='collapsed', key = "search_date")
+        search_date = col2.date_input("기간",value=st.session_state.before_search_date,label_visibility='collapsed', key = "search_date")
         if st.session_state.company_name != "" and len(search_date) > 1 :
             
 
