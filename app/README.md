@@ -10,6 +10,10 @@ pip install cupy-cuda11x
 pip install cuml-cu11 --extra-index-url=https://pypi.ngc.nvidia.com
 pip install cupy-cuda110
 ```
+# KorBertSum setting
+- `app/utils/KorBertSum` 에서 001_bert_morp_pytorch.zip 앞축해제
+- `app/utils/bert_models` 에서 bert_classifier2.zip 앞축해제
+
 # KoBert 사용
 ```
 pip install git+https://git@github.com/SKTBrain/KoBERT.git@master
