@@ -202,7 +202,7 @@ class Trainer(object):
             self.model.eval()
         stats = Statistics()
 
-        
+        selected_ids = np.array([])
         with torch.no_grad():
             for batch in test_iter:
                 src = batch.src
@@ -215,7 +215,7 @@ class Trainer(object):
 
                 gold = []
                 pred = []
-                selected_ids = None
+                
                 if (cal_lead):
                     selected_ids = [list(range(batch.clss.size(1)))] * batch.batch_size
                 elif (cal_oracle):
@@ -639,7 +639,7 @@ def get_top_sentences(user_input, model, tokenizer,checkpoint,model_flags):
     bot_input_ids = News_to_input(user_input, openapi_key, tokenizer)
     
     chat_history_ids = summary(args, bot_input_ids, 0, '', None, model,checkpoint,model_flags)
-    if(chat_history_ids == None): 
+    if(len(chat_history_ids) == 0): 
         chat_history_ids = ([i for i in range(len(user_input.split('. ')))], None)
     pred_lst = list(chat_history_ids[0])
     final_text = []
@@ -702,8 +702,8 @@ def extract_topk_summarization(news_df):
     vocab = get_kobert_vocab()
     tokenizer = nlp.data.BERTSPTokenizer(get_tokenizer(), vocab, lower=False)
     topic_df = add_topk_to_df(news_df, model, tokenizer,checkpoint,model_flags)
-    topic_df.to_csv(f"final_after_extract_topk.csv",index = False)
-    topic_df.to_pickle(f"final_after_extract_topk.pkl")
+    #topic_df.to_csv(f"final_after_extract_topk.csv",index = False)
+    #topic_df.to_pickle(f"final_after_extract_topk.pkl")
     return  topic_df#[topic, context, topk]
     
 if __name__ == '__main__':
