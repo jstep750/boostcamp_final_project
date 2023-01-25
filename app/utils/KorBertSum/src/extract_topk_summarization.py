@@ -215,7 +215,7 @@ class Trainer(object):
 
                 gold = []
                 pred = []
-
+                selected_ids = None
                 if (cal_lead):
                     selected_ids = [list(range(batch.clss.size(1)))] * batch.batch_size
                 elif (cal_oracle):
@@ -639,6 +639,8 @@ def get_top_sentences(user_input, model, tokenizer,checkpoint,model_flags):
     bot_input_ids = News_to_input(user_input, openapi_key, tokenizer)
     
     chat_history_ids = summary(args, bot_input_ids, 0, '', None, model,checkpoint,model_flags)
+    if(chat_history_ids == None): 
+        chat_history_ids = ([i for i in range(len(user_input.split('. ')))], None)
     pred_lst = list(chat_history_ids[0])
     final_text = []
     for p in pred_lst:

@@ -54,20 +54,25 @@ def search_page():
         st.session_state.company_name = ""
     if 'before_company_name' not in st.session_state:
         st.session_state.before_company_name = ""
+    if 'search_date' not in st.session_state:
+        st.session_state.search_date = (datetime.date(2022,12,1), datetime.date(2022,12,15))
+    if 'before_search_date' not in st.session_state:
+        st.session_state.before_search_date = (datetime.date(2022,12,1), datetime.date(2022,12,15))
     page_buttons=[]
     with search_contain.container():
         #검색창-
         company_name = st.text_input("검색", value=st.session_state['company_name'], placeholder ="회사명 입력",label_visibility='collapsed', key="company_name")
         #기간 검색창
         _, col2 = st.columns([5,2])
-        search_date = col2.date_input("기간",value=(datetime.date(2022,12,26), datetime.date(2022,12,30)),label_visibility='collapsed')
+        search_date = col2.date_input("기간",value=(datetime.date(2022,12,1), datetime.date(2022,12,15)),label_visibility='collapsed', key = "search_date")
+        if st.session_state.company_name != "" and len(search_date) > 1 :
             
-        if st.session_state.company_name != "" and len(search_date) > 1:
-            start_date = f"{search_date[0].year:0>4d}{search_date[0].month:0>2d}{search_date[0].day:0>2d}"  #시작검색일
-            end_date = f"{search_date[1].year:0>4d}{search_date[1].month:0>2d}{search_date[1].day:0>2d}"    #종료검색일
 
-            if st.session_state.before_company_name != st.session_state.company_name:
+            if st.session_state.before_company_name != st.session_state.company_name or st.session_state.before_search_date !=st.session_state.search_date:
                 st.session_state.before_company_name = st.session_state.company_name
+                st.session_state.before_search_date = st.session_state.search_date
+                start_date = f"{st.session_state.search_date[0].year:0>4d}{st.session_state.search_date[0].month:0>2d}{st.session_state.search_date[0].day:0>2d}"  #시작검색일
+                end_date = f"{st.session_state.search_date[1].year:0>4d}{st.session_state.search_date[1].month:0>2d}{st.session_state.search_date[1].day:0>2d}"    #종료검색일
                 # 회사이름 검색 요청
                 response = requests.post(f"http://localhost:8001/company_name/?company_name={st.session_state.company_name}&date_gte={start_date}&date_lte={end_date}&news_num=999")
                 response = response.json()
