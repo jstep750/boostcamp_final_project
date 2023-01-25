@@ -16,7 +16,8 @@ from app.utils.Bigkindscrawl import bigkinds_crawl
 from app.utils.BERTopic.bertopic_model import bertopic_modeling
 from app.utils.Extract_context import extract_context
 from app.utils.One_sent_summarization import summary_one_sent
-from app.utils.KorBertSum.src.extract_topk_summarization import extract_topk_summarization
+from app.utils.KorBertSum.src.extract_topk_summarization import extract_topk_summarization, extract_topk_summarization2
+from app.utils.KorBertSum.src.topic_summary import make_summary_paragraph
 
 app = FastAPI()
 
@@ -51,7 +52,7 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     #news_df.to_csv(f"{company_name}_{date_gte}_{date_lte}_crwal_news_context.csv",index=False)
     #news_df.to_pickle(f"{company_name}_{date_gte}_{date_lte}_crwal_news_context.pkl")
     times[2] = time.time()
-    '''
+    
     news_df = pd.read_pickle("윤석열_20221201_20221203_crwal_news_context.pkl")
     #3. 토픽 분류
     print("start divide topic")
@@ -60,45 +61,43 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     #news_df.to_csv(f"{company_name}_after_bertopic_with_num.csv",index=False)
     #news_df.to_pickle(f"{company_name}_after_bertopic_with_num.pkl")
     
+    
+    news_df = pd.read_pickle("after_bertopic.pkl")
     times[3] = time.time()
     #4. 한줄요약
     print("summary one sentence")
-    topic_df = pd.DataFrame()
+    #topic_df = pd.DataFrame()
     #토픽번호에 맞는 데이터만 가져오기
-    for topic_number in set(news_df['topic']):
-        if topic_number == -1:
-            continue
-        now_news_df = news_df[news_df['topic']==topic_number]
-        now_topic_df = summary_one_sent(topic_number,now_news_df)
-        topic_df = pd.concat([topic_df,now_topic_df])
-    #topic_df.to_csv(f"{company_name}_topic_one_sent.csv",index = False)
-    #topic_df.to_pickle(f"{company_name}_topic_one_sent.pkl")
+    topic_df = summary_one_sent(news_df)
+    topic_df.to_csv(f"{company_name}_topic_one_sent.csv",index = False)
+    topic_df.to_pickle(f"{company_name}_topic_one_sent.pkl")
 
     times[4] = time.time()
     print("crwal_end")
     print(f'crawl : {times[1] - times[0]}\ncontext: {times[2]-times[1]}\n BERTtopic: {times[3]-times[2]}\n onesent: {times[4]-times[3]}')
     print(f'total time : {times[4]-times[0]} sec')
-    
-    #news_df = pd.read_pickle("after_bertopic.pkl")
-    #topic_df = pd.read_pickle("topic_one_sent.pkl")
+    '''
+    news_df = pd.read_pickle("after_bertopic.pkl")
+    topic_df = pd.read_pickle("삼성전자_topic_one_sent.pkl")
     #5. 한줄요약 반환 result df = ['topic','one_sent's]  
     result = json.dumps({"news_df": news_df.to_json(orient = "records",force_ascii=False) ,"topic_df": topic_df.to_json(orient = "records",force_ascii=False)})   
     return Response(result, media_type="application/json")
     #return {'topic': list(app.topic_df['topic']),'one_sent':list(app.topic_df['one_sent'])}
     
 # 문단요약
-@app.post("/summary/{topic_number}")
-def request_summary_news(now_news_df):    
+@app.put("/summary/{topic_number}")
+def request_summary_news(topic_number, json):
+    print("post")
+    print(topic_number,json)    
     #전처리
-
-    #문단요약
-    summary_text =""
-    print(now_news_df.index)
-    '''
-    for topk in extract_topk_summarization(now_news_df).loc[1,'topk']:
-        idx,text = topk
-        summary_text = summary_text + text
-        '''
+    #now_news_df = pd.read_json(now_news_json,orient="records")
+    #print(now_news_df)
+    news_df = pd.read_pickle("after_bertopic.pkl")
+    now_news_df = news_df[news_df['topic']==int(topic_number)]
+    #추출요약
+    summary_df = extract_topk_summarization2(now_news_df)
+    #생성요약
+    summary_text = make_summary_paragraph(summary_df)
     print(summary_text)
     #return = 문단
     return {"summarization":summary_text}

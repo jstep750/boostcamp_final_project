@@ -1,67 +1,77 @@
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, DataCollatorForSeq2Seq, Seq2SeqTrainingArguments, Seq2SeqTrainer, PreTrainedTokenizerFast, BartForConditionalGeneration
-from datasets import Dataset, load_dataset
-from torch.utils.data import DataLoader
+from transformers import PreTrainedTokenizerFast, BartForConditionalGeneration
+# from datasets import Dataset, load_dataset
+# from torch.utils.data import DataLoader
 
 import torch
 import pandas as pd
 import numpy as np
 import time
-import sys
-import requests
-import json
+# import sys
+# import requests
+# import json
+from collections import defaultdict
+import os
+import pickle
+import re
+
+# from newspaper import Article
+# from sklearn.metrics.pairwise import cosine_similarity
+import networkx as nx
+from hanspell import spell_checker
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+tokenizer = PreTrainedTokenizerFast.from_pretrained('digit82/kobart-summarization')
+model = BartForConditionalGeneration.from_pretrained('digit82/kobart-summarization')
 
-def preprocessing(text):
-    text = text.replace('<b>', '')
-    text = text.replace('</b>', '')
-    text = text.replace('&apos;', '')
-    text = text.replace('...', '')
-    text = text.replace('\\u200b', '')
-    text = text.replace('M&amp;A', '')
-    text = text.replace('&quot;', '')
-    text = text.replace('\\xa0', '')
-    text = text.strip()
-    return text
+class SummaryGenerater():
+    def __init__(self, model, tokenizer):
+        self.model = model
+        self.tokenizer = tokenizer
+        self.model.to(device)
+        
+    def concat_title_context(self, df):
+        add_title_context = []
+        for _, t in df.iterrows():
+            context = [t['title']] + t['context'][0:2]
+            add_title_context.append((' '.join(context)).strip())
+        df['concat_text'] = add_title_context
+        return df
+    
+    def summary(self, df):
+        summary_dict = {}
+        df = self.concat_title_context(df)
+        topic_nums = sorted(df['topic'].unique())
+        
+        for topic_n in topic_nums:
+            if topic_n == -1:
+                continue
+            topic_context = list(df[df['topic'] == topic_n]['concat_text'])
+            # s = time.time()
+            input_ids = self.tokenizer.encode('.'.join(topic_context))
+            summary_ids = self.model.generate(torch.tensor([input_ids[:1020]]).to(device), num_beams=3, max_length=256, eos_token_id=1)
+            summary_text = self.tokenizer.decode(summary_ids.squeeze().tolist(), skip_special_tokens=True)
+            summary_dict[topic_n] = summary_text
+            # print("================   Topic #: ", topic_n)
+            # print("================   Article #: ", len(topic_context))
+            # print(topic_context)
+            # print("================")
+            # print(topic_n, summary_text)
+            # print(f'{(time.time() - s):0.2f} sec')
+        summary_df = pd.DataFrame(data={'topic': summary_dict.keys(),
+                                        'one_sent': summary_dict.values()})
+        return summary_df
+    
+    
+SG = SummaryGenerater(model, tokenizer)
 
-def summary_one_sent(topic_number:int, df: pd.DataFrame = None) -> pd.DataFrame:
-    add_title_context = []
-    for _, t in df.iterrows():
-        #tem = [c for c in t['context'].split('.') if len(c) > 3]
-        tem = t['context']
-        try:
-            con = t['title'] + ' ' + tem[0][1] + '. ' + tem[1][1] + '.'
-        except:
-            con = t['title'] + ' ' + tem[0][1] + '.'
-        con = preprocessing(con)
-        add_title_context.append(con)
-
-    title_context = [preprocessing(con) for con in df.title]
-
-    Kobart_tokenizer = PreTrainedTokenizerFast.from_pretrained('digit82/kobart-summarization')
-    Kobart = BartForConditionalGeneration.from_pretrained('digit82/kobart-summarization')
-    Kobart.to(device)
-
-    s = time.time()
-    input_ids = Kobart_tokenizer.encode('.'.join(add_title_context))
-    #print('input_ids length: ', len(input_ids))
-    summary_ids = Kobart.generate(torch.tensor([input_ids[:1020]]).to(device),  num_beams=4,  max_length=512,  eos_token_id=1)
-    one_sentence = Kobart_tokenizer.decode(summary_ids.squeeze().tolist(), skip_special_tokens=True)
-    #print(time.time() - s)
-    news_df = pd.DataFrame(data = {'topic':[topic_number],'one_sent':[one_sentence]})
-    return news_df
+def summary_one_sent(df):
+    topic_df = SG.summary(df)
+    return topic_df
     
 if __name__ == "__main__":
     news_df = pd.read_pickle("/opt/ml/final-project-level3-nlp-05/after_bertopic.pkl")
     topic_df = pd.DataFrame()
     #토픽번호에 맞는 데이터만 가져오기
     print("total topic num : ",set(news_df['topic']))
-    for topic_number in set(news_df['topic']):
-        print("topic_number",topic_number)
-        if topic_number == -1:
-            continue
-        now_news_df = news_df[news_df['topic']==topic_number]
-        print("len ",len(now_news_df))
-        now_topic_df = summary_one_sent(topic_number,now_news_df)
-        topic_df = pd.concat([topic_df,now_topic_df])
+    topic_df = SG.summary(news_df)
     print(topic_df)

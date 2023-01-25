@@ -21,6 +21,9 @@ import networkx as nx
 import argparse
 from omegaconf import OmegaConf
 
+from cuml.cluster import HDBSCAN
+from cuml.manifold import UMAP
+
 import os
 import sys
 from pathlib import Path
@@ -107,6 +110,10 @@ def bertopic_modeling(cfg ,df: pd.DataFrame) -> pd.DataFrame:
 
     custom_tokenizer = CustomTokenizer(Mecab(), ko_stop_words)
     vectorizer = CountVectorizer(tokenizer=custom_tokenizer, max_features=3000)
+
+    # Create instances of GPU-accelerated UMAP and HDBSCAN
+    umap_model = UMAP(n_components=5, n_neighbors=15, min_dist=0.0)
+    hdbscan_model = HDBSCAN(min_samples=10, gen_min_span_tree=True)
 
     model = BERTopic(
         embedding_model = model_cfg.model_name,

@@ -263,6 +263,8 @@ class DataIterator(object):
     def create_batches(self):
         """ Create batches """
         data = self.data()
+        if(data == None):
+            return None
         for buffer in self.batch_buffer(data, self.batch_size * 50):
 
             p_batch = sorted(buffer, key=lambda x: len(x[3]))

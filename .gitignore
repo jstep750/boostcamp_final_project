@@ -171,11 +171,8 @@ poetry.toml
 # End of https://www.toptal.com/developers/gitignore/api/python
 
 #News3paper3kCrawl/
-<<<<<<< HEAD
 app/utils/KorBertSum/001_bert_morp_pytorch/
 
 app/utils/KorBertSum/models/bert_classifier2/
 app/utils/KorBertSum/models/bert_classifier/
-=======
 DB/Database/Financial_news
->>>>>>> 870815aebb57304377893832102381cc6888c754

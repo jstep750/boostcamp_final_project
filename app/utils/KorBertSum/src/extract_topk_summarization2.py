@@ -8,48 +8,34 @@ from pathlib import Path
 ASSETS_DIR_PATH = os.path.abspath(os.path.join(Path(__file__).parent, os.pardir))
 print(ASSETS_DIR_PATH)
 sys.path.append(ASSETS_DIR_PATH)
+
 import argparse
 import glob
-import os
+
 import random
 import signal
 import time
 import numpy as np
-from tqdm import tqdm 
+
+import pandas as pd
 import torch
 from pytorch_pretrained_bert import BertConfig
 
-
+from tqdm import tqdm
 import distributed
-from src.models import data_loader, model_builder
-from src.models.data_loader import load_dataset
-from src.models.model_builder import Summarizer
+#from models import data_loader, model_builder
+from .models.data_loader import load_dataset
+from models.model_builder import Summarizer
 from tensorboardX import SummaryWriter
-from src.models.reporter import ReportMgr
-from src.models.stats import Statistics
+from models.reporter import ReportMgr
+from models.stats import Statistics
 from others.logging import logger
 # from models.trainer import build_trainer
 # build_trainer의 dependency package pyrouge.utils가 import되지 않아 직접 셀에 삽입
 from others.logging import logger, init_logger
 import easydict
-import os
-from os import listdir
-from os.path import isfile, join, isdir
-import pandas as pd
 
-import argparse
-import json
-import os
-import time
-import urllib3
-from glob import glob
-import collections
-import six
-import gc
-import gluonnlp as nlp
-from kobert.utils import get_tokenizer
-from kobert.utils import download as _download
-
+openapi_key = '9318dc23-24ac-4b59-a99e-a29ec170bf02'
 parent_dir = os.path.abspath(os.path.join(Path(__file__).parent, os.pardir))
 args = easydict.EasyDict({
     "encoder":'classifier',
@@ -87,7 +73,6 @@ args = easydict.EasyDict({
 init_logger(args.log_file)
 device = "cpu" if args.visible_gpus == '-1' else "cuda"
 device_id = 0 if device == "cuda" else -1
-
 
 def build_trainer(args, device_id, model,
                   optim):
@@ -366,8 +351,8 @@ class Trainer(object):
             self.model_saver.maybe_save(step)
 
             
-def summary(args, b_list, device_id, pt, step, model, checkpoint,model_flags):
-    device_id = 0
+def summary(args, b_list, device_id, pt, step, model,checkpoint,model_flags):
+
     device = "cpu" if args.visible_gpus == '-1' else "cuda"
     if (pt != ''):
         test_from = pt
@@ -393,6 +378,19 @@ def summary(args, b_list, device_id, pt, step, model, checkpoint,model_flags):
 def _tally_parameters(model):
     n_params = sum([p.nelement() for p in model.parameters()])
     return n_params
+
+import argparse
+import json
+import os
+import time
+import urllib3
+from glob import glob
+import collections
+import six
+import gc
+import gluonnlp as nlp
+from kobert.utils import get_tokenizer
+from kobert.utils import download as _download
 
 def do_lang ( openapi_key, text ) :
     openApiURL = "http://aiopen.etri.re.kr:8000/WiseNLU"
@@ -454,7 +452,7 @@ def get_kobert_vocab(cachedir="./tmp/"):
 
     
 class BertData():
-    def __init__(self, tokenizer):
+    def __init__(self,tokenizer):
         self.tokenizer = tokenizer
         #self.tokenizer = Tokenizer(vocab_file_path)
         self.sep_vid = self.tokenizer.vocab['[SEP]']
@@ -566,12 +564,9 @@ def _lazy_dataset_loader(pt_file):
 def News_to_input(text, openapi_key, tokenizer):
     newstemp = do_lang(openapi_key, text)
     news = newstemp.split(' ./SF ')[:-1]
-    
     bertdata = BertData(tokenizer)
     sent_labels = [0] * len(news)
     tmp = bertdata.preprocess(news)
-    if(not tmp): return None
-    #print(tmp)
     b_data_dict = {"src":tmp[0],
                "tgt": [0],
                "labels":[0,0,0],
@@ -583,88 +578,26 @@ def News_to_input(text, openapi_key, tokenizer):
     b_list = []
     b_list.append(b_data_dict) 
     return b_list
-
-openapi_key = '9318dc23-24ac-4b59-a99e-a29ec170bf02'
-
-import re
-from nltk import word_tokenize, sent_tokenize
-import nltk
-nltk.download('punkt')
-
-def clean_byline(text):
-    # byline
-    pattern_email = re.compile(r'[-_0-9a-z]+@[-_0-9a-z]+(?:\.[0-9a-z]+)+', flags=re.IGNORECASE)
-    pattern_url = re.compile(r'(?:https?:\/\/)?[-_0-9a-z]+[^~][^%](?:\.[-_0-9a-z]+)+[^%]', flags=re.IGNORECASE)
-    pattern_others = re.compile(r'\[[^\]]*(◼|기자|뉴스|사진|자료|자료사진|출처|특파원|교수|작가|대표|논설|고문|주필|부문장|팀장|장관|원장|연구원|이사장|위원|실장|차장|부장|에세이|화백|사설|소장|단장|과장|기획자|경제|한겨례|일보|미디어|데일리|한겨례|타임즈|위키트리|큐레이터|저작권|평론가|©|©|ⓒ|\@|\/|=|▶|무단|전재|재배포|금지|댓글|좋아요|공유하기|글씨 크게 보기|글씨 작게 보기|고화질|표준화질|자동 재생|키보드 컨트롤 안내|동영상 시작)[가-힣1-9a-zA-Z ]+?\]')
-    pattern_others2 = re.compile(r'\([^\)]*(◼|기자|뉴스|사진|자료|자료사진|출처|특파원|교수|작가|대표|논설|고문|주필|부문장|팀장|장관|원장|연구원|이사장|위원|실장|차장|부장|에세이|화백|사설|소장|단장|과장|기획자|경제|한겨례|일보|미디어|데일리|한겨례|타임즈|위키트리|큐레이터|저작권|평론가|©|©|ⓒ|\@|\/|=|▶|무단|전재|재배포|금지|댓글|좋아요|공유하기|글씨 크게 보기|글씨 작게 보기|고화질|표준화질|자동 재생|키보드 컨트롤 안내|동영상 시작)[가-힣1-9a-zA-Z ]+?\)')
-    pattern_tag = re.compile(r'\<[^>][^가-힣 ]*?>')
-    result = pattern_email.sub('', text)
-    result = pattern_url.sub('', result)
-    result = pattern_others.sub('', result)
-    result = pattern_others2.sub('', result)
-    result = pattern_tag.sub('', result)
-
-    # 본문 시작 전 꺽쇠로 쌓인 바이라인 제거
-    pattern_bracket = re.compile(r'^((?:\[.+\])|(?:【.+】)|(?:<.+>)|(?:◆.+◆)\s)')
-    result = pattern_bracket.sub('', result).strip()
-    return result
-
-
-def text_filter(title, raw): # str -> 전처리 -> 문장 배열
-    text = clean_byline(raw)
-    result = text.strip()
-    sentences = sent_tokenize(result) 
     
-    return_sentences = []
-    for sentence in sentences:
-        for sent in sentence.split('\n'):
-            split_sent = [s+'다.' for s in sent.split('다.')]
-            for s in split_sent:
-                s = s.strip()
-                if(len(s)>12 and '다' in s[-3:]): 
-                    if(s[-1] != '.'):
-                        s += '.'
-                    return_sentences.append(s+' ')
-        
-    s1 = set(title.split())
-    s2 = set(return_sentences[0].split())
-    actual_jaccard = float(len(s1.intersection(s2)))/float(len(s1.union(s2)))
-    if(actual_jaccard > 0.5):
-        return_sentences = return_sentences[1:]
-        
-    return_sentences = return_sentences[:30]
-    return return_sentences
-
-
-def get_top_sentences(user_input, model, tokenizer,checkpoint,model_flags):
+def get_topk_sentences(k, user_input, model, tokenizer,checkpoint,model_flags):
     bot_input_ids = News_to_input(user_input, openapi_key, tokenizer)
-    
-    chat_history_ids = summary(args, bot_input_ids, 0, '', None, model,checkpoint,model_flags)
-    pred_lst = list(chat_history_ids[0])
+    chat_history_ids = summary(args, bot_input_ids, device_id, '', None, model,checkpoint,model_flags)
+    pred_lst = list(chat_history_ids[0][:k])
     final_text = []
-    for p in pred_lst:
-        if(p < len(user_input.split('. ')) and len(user_input.split('. ')[p]) > 10):
-            final_text.append((p, user_input.split('. ')[p]+'. '))
+    for i,a in enumerate(user_input.split('.')):
+        if i in pred_lst:
+            #print(i, a)
+            final_text.append((i, a+'. '))
+    #print('------------------------------------------------------------')
     return final_text
 
 
 def add_topk_to_df(df, model, tokenizer,checkpoint,model_flags):
-    
     start = time.time()
     topk = []
-    for i,context2 in enumerate(tqdm(df['context'])):
-        #context2 = eval(context2)
-        context = []
-        for s in context2:
-            if(len(s) > 600):
-                s = s.split('.')[0]+' '
-            if(len(s) < 600):
-                context.append(s)
-        
-        context = context[:30]
+    for i,context in enumerate(tqdm(df['context'])):
         top = None
-        if(len(context) > 4):
-            top = get_top_sentences(' '.join(context), model, tokenizer,checkpoint,model_flags)
+        top = get_topk_sentences(len(context)//4+1, ' '.join(context), model, tokenizer,checkpoint,model_flags)
         if(top):
             topk.append(top)
         else:
@@ -675,41 +608,32 @@ def add_topk_to_df(df, model, tokenizer,checkpoint,model_flags):
     print(f"{time.time()-start:.4f} sec")
     return df
 
-
-def add_context_to_df(df):
-    contexts = []
-    for raw, title in zip(tqdm(df['raw']), df['title']):
-        if(raw):
-            contexts.append(text_filter(title, raw))
-        else:
-            contexts.append('delete this')
-    df['context'] = contexts
-    df = df.drop(df[df['context'] == 'delete this'].index)
-    return df
-
 def extract_topk_summarization(news_df):
+    #args.gpu_ranks = [int(i) for i in args.gpu_ranks.split(',')]
     args.gpu_ranks = [0]
     os.environ["CUDA_VISIBLE_DEVICES"] = args.visible_gpus
 
     model_flags = ['hidden_size', 'ff_size', 'heads', 'inter_layers','encoder','ff_actv', 'use_interval','rnn_size']
     
+    
     checkpoint = torch.load(args.test_from, map_location=lambda storage, loc: storage)
     config = BertConfig.from_json_file(args.bert_config_path)
     model = Summarizer(args, device, load_pretrained_bert=False, bert_config = config)
+    
     model.load_cp(checkpoint)
-    model.eval()  
+    model.eval()
+
     vocab = get_kobert_vocab()
     tokenizer = nlp.data.BERTSPTokenizer(get_tokenizer(), vocab, lower=False)
-    topic_df = add_topk_to_df(news_df, model, tokenizer,checkpoint,model_flags)
-    topic_df.to_csv(f"final_after_extract_topk.csv",index = False)
-    topic_df.to_pickle(f"final_after_extract_topk.pkl")
-    return  topic_df#[topic, context, topk]
-def extract_topk_summarization2(news_df):
-    topic_df = pd.read_pickle("final_after_extract_topk.pkl")
-    return  topic_df#[topic, context, topk]
-if __name__ == '__main__':
+
+    news_df = add_topk_to_df(news_df,model, tokenizer,checkpoint,model_flags)
+    #news_df.to_csv("para_extract_summary.csv",index=False)
+    #news_df.to_pickle("para_extract_summary.pkl")
+    return news_df
+
+if __name__ == "__main__":
     news_df = pd.read_pickle("after_bertopic.pkl")
-    topic_df = extract_topk_summarization(news_df)
-    topic_df.to_csv(f"after_extract_topk.csv",index = False)
-    topic_df.to_pickle(f"after_extract_topk.pkl")
-    print(topic_df)
+    news_df = news_df[news_df['topic'] == 0]
+    extract_topk_summarization(news_df)
+
+    
