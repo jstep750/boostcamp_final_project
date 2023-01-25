@@ -173,6 +173,6 @@ poetry.toml
 #News3paper3kCrawl/
 app/utils/KorBertSum/001_bert_morp_pytorch/
 
-app/utils/KorBertSum/models/bert_classifier2/
-app/utils/KorBertSum/models/bert_classifier/
+app/utils/KorBertSum/bert_models/bert_classifier2/
+app/utils/KorBertSum/bert_models/bert_classifier/
 DB/Database/Financial_news
