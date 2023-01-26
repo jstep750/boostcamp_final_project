@@ -1,23 +1,8 @@
 from transformers import PreTrainedTokenizerFast, BartForConditionalGeneration
-# from datasets import Dataset, load_dataset
-# from torch.utils.data import DataLoader
-
 import torch
-import pandas as pd
-import numpy as np
 import time
-# import sys
-# import requests
-# import json
-from collections import defaultdict
-import os
-import pickle
-import re
+import pandas as pd
 
-# from newspaper import Article
-# from sklearn.metrics.pairwise import cosine_similarity
-import networkx as nx
-from hanspell import spell_checker
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 tokenizer = PreTrainedTokenizerFast.from_pretrained('digit82/kobart-summarization')
@@ -28,18 +13,9 @@ class SummaryGenerater():
         self.model = model
         self.tokenizer = tokenizer
         self.model.to(device)
-        
-    def concat_title_context(self, df):
-        add_title_context = []
-        for _, t in df.iterrows():
-            context = [t['title']] + t['context'][0:2]
-            add_title_context.append((' '.join(context)).strip())
-        df['concat_text'] = add_title_context
-        return df
     
     def summary(self, df):
         summary_dict = {}
-        df = self.concat_title_context(df)
         topic_nums = sorted(df['topic'].unique())
         
         for topic_n in topic_nums:
