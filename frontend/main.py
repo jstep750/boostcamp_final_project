@@ -39,7 +39,14 @@ st.markdown("""
                     </body>
                 </html>
             """, unsafe_allow_html=True)
-
+css = '''
+<style>
+section.main > div:has(~ footer ) {
+    padding-bottom: 5px;
+}
+</style>
+'''
+st.markdown(css, unsafe_allow_html=True)
 with open("frontend/style.css") as source_css:
         st.markdown(f"<style>{source_css.read()}</style>",unsafe_allow_html=True)
 
@@ -82,31 +89,19 @@ def search_page():
                 st.session_state["topic_df"] = topic_df
             
             #버튼 추가  
+            col1, col2 = st.columns([1,1])
             max_idx = len(st.session_state["topic_df"]) 
-            for idx in range(int(max_idx / 2)):                
-                col1, col2 = st.columns([1,1])
-                topic_number = st.session_state["topic_df"]["topic"][idx * 2]
-                topic_text = st.session_state["topic_df"]["one_sent"][idx * 2]
+            for idx in range(max_idx):
+                topic_number = st.session_state["topic_df"]["topic"][idx]
+                topic_text = st.session_state["topic_df"]["one_sent"][idx]
                 if len(topic_text) > 60:
                     topic_text = topic_text[0:60] + "..."
-                col1.button(topic_text,key=idx * 2)
-                page_buttons.append(idx * 2)
+                page_buttons.append(idx)
+                if idx%2 == 0:
+                    col1.button(topic_text,key=idx)
+                else:
+                    col2.button(topic_text,key=idx)
 
-                topic_number = st.session_state["topic_df"]["topic"][idx * 2 + 1]
-                topic_text = st.session_state["topic_df"]["one_sent"][idx * 2 + 1]
-                if len(topic_text) > 60:
-                    topic_text = topic_text[0:60] + "..."
-                col2.button(topic_text,key=idx * 2 + 1)
-                page_buttons.append(idx * 2 + 1)
-            
-            if max_idx % 2 == 1:
-                col1, col2 = st.columns([1,1])
-                topic_number = st.session_state["topic_df"]["topic"][max_idx - 1]
-                topic_text = st.session_state["topic_df"]["one_sent"][max_idx - 1]
-                if len(topic_text) > 60:
-                    topic_text = topic_text[0:60] + "..."
-                col1.button(topic_text,key=max_idx - 1)
-                page_buttons.append(max_idx - 1)
     # 요약문 누르면 해당 페이지로
     for button_key in page_buttons:
         if st.session_state[button_key]:
