@@ -11,6 +11,7 @@ import re
 
 #페이지 타이틀
 st.set_page_config(page_title="News Summarization",layout = 'wide')
+#스크롤
 st.markdown("""
                 <html>
                     <head>

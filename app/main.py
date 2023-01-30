@@ -15,7 +15,7 @@ from app.utils.BERTopic.bertopic_model import bertopic_modeling
 from app.utils.One_sent_summarization import summary_one_sent
 from app.utils.KorBertSum.src.extract_topk_summarization import extract_topk_summarization
 from app.utils.KorBertSum.src.topic_summary import make_summary_paragraph
-
+from app.utils.SentimentAnalysis.sapipeline import sentiment_analysis
 app = FastAPI()
 
 
@@ -32,7 +32,7 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
         Dict{"news_df" : 뉴스 dataframe_tojson
              "topic_df" : 토픽 dataframe_tojson}
     '''
-    times=[0 for i in range(4)]    
+    times=[0 for i in range(5)]    
     times[0]= time.time()
 
     #1. 크롤링
@@ -48,20 +48,23 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     print("start divide topic")
     #cfg = OmegaConf.load(f"./app/config/bertopic_config.yaml")
     news_df = bertopic_modeling(news_df)
+    news_df.to_pickle(f"{company_name}_{date_gte}_{date_lte}_news_df.pkl")
     times[2] = time.time()
 
     #4. 한줄요약
     print("summary one sentence")
     topic_df = summary_one_sent(news_df)
     times[3] = time.time()
-    
+
+    topic_df = sentiment_analysis(topic_df)
+    times[4] = time.time()
     print("crwal_end")
-    print(f'crawl : {times[1] - times[0]}\n BERTtopic: {times[2]-times[1]}\n onesent: {times[3]-times[2]}')
-    print(f'total time : {times[3]-times[0]} sec')
+    print(f'crawl : {times[1] - times[0]}\nBERTtopic: {times[2]-times[1]}\nonesent: {times[3]-times[2]}\nsentimen analysis: {times[4]-times[3]}')
+    print(f'total time : {times[4]-times[0]} sec')
 
     #topic_df.to_csv(f"{company_name}_{date_gte}_{date_lte}_topic.csv",index=False)
     #topic_df.to_pickle(f"{company_name}_{date_gte}_{date_lte}_topic.pkl")
-
+    #news_df.to_pickle(f"{company_name}_{date_gte}_{date_lte}_news_df.pkl")
     #5. 한줄요약 반환
     result = json.dumps({"news_df": news_df.to_json(orient = "records",force_ascii=False) ,"topic_df": topic_df.to_json(orient = "records",force_ascii=False)})   
     return Response(result, media_type="application/json")
@@ -79,10 +82,9 @@ async def request_summary_news(request:Request):
         #추출요약
         summary_df = extract_topk_summarization(now_news_df)
         times[1]= time.time()
-        #summary_df.to_csv("IU.csv",index=False)
-        #summary_df.to_pickle("IU.pkl")
         #생성요약
         summary_text = make_summary_paragraph(summary_df)
+        summary_text = 
         times[2]= time.time()
         print(f"extract time : {times[1]-times[0]} sec \nparagraph time : {times[2]-times[1]} sec")
     return {"summarization":summary_text}
