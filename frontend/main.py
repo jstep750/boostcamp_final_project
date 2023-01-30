@@ -39,14 +39,7 @@ st.markdown("""
                     </body>
                 </html>
             """, unsafe_allow_html=True)
-css = '''
-<style>
-section.main > div:has(~ footer ) {
-    padding-bottom: 5px;
-}
-</style>
-'''
-st.markdown(css, unsafe_allow_html=True)
+
 with open("frontend/style.css") as source_css:
         st.markdown(f"<style>{source_css.read()}</style>",unsafe_allow_html=True)
 
@@ -65,37 +58,38 @@ def search_page():
         st.session_state.search_date = (datetime.date(2022,12,1), datetime.date(2022,12,15))
     if 'before_search_date' not in st.session_state:
         st.session_state.before_search_date = (datetime.date(2022,12,1), datetime.date(2022,12,15))
+    
     page_buttons=[]
     with search_contain.container():
         #검색창-
         company_name = st.text_input("검색", value=st.session_state['company_name'], placeholder ="회사명 입력",label_visibility='collapsed', key="company_name")
         #기간 검색창
-        _, col2 = st.columns([5,2])
+        col1,_, col2 = st.columns([2,3,2])
         search_date = col2.date_input("기간",value=st.session_state.before_search_date,label_visibility='collapsed', key = "search_date")
+        
+        news_num = col1.number_input("뉴스 개수",0, 999,999,label_visibility='collapsed',key = "news_num")
+        
         if st.session_state.company_name != "" and len(search_date) > 1 :
-            
-
             if st.session_state.before_company_name != st.session_state.company_name or st.session_state.before_search_date !=st.session_state.search_date:
                 st.session_state.before_company_name = st.session_state.company_name
                 st.session_state.before_search_date = st.session_state.search_date
                 start_date = f"{st.session_state.search_date[0].year:0>4d}{st.session_state.search_date[0].month:0>2d}{st.session_state.search_date[0].day:0>2d}"  #시작검색일
                 end_date = f"{st.session_state.search_date[1].year:0>4d}{st.session_state.search_date[1].month:0>2d}{st.session_state.search_date[1].day:0>2d}"    #종료검색일
                 # 회사이름 검색 요청
-                response = requests.post(f"http://localhost:8001/company_name/?company_name={st.session_state.company_name}&date_gte={start_date}&date_lte={end_date}&news_num=999")
+                response = requests.post(f"http://localhost:8001/company_name/?company_name={st.session_state.company_name}&date_gte={start_date}&date_lte={end_date}&news_num={news_num}")
                 response = response.json()
                 news_df = pd.read_json(response["news_df"],orient="records")
                 topic_df = pd.read_json(response["topic_df"],orient="records")
                 st.session_state["news_df"] = news_df
                 st.session_state["topic_df"] = topic_df
-            
+            if len(st.session_state["news_df"]) == 0:
+                st.warning('검색 결과가 없습니다.', icon="⚠️")
             #버튼 추가  
             col1, col2 = st.columns([1,1])
             max_idx = len(st.session_state["topic_df"]) 
             for idx in range(max_idx):
                 topic_number = st.session_state["topic_df"]["topic"][idx]
                 topic_text = st.session_state["topic_df"]["one_sent"][idx]
-                if len(topic_text) > 60:
-                    topic_text = topic_text[0:60] + "..."
                 page_buttons.append(idx)
                 if idx%2 == 0:
                     col1.button(topic_text,key=idx)

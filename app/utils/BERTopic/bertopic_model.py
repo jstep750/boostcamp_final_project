@@ -11,6 +11,8 @@ import pandas as pd
 from bertopic import BERTopic
 from cuml.cluster import HDBSCAN
 from cuml.manifold import UMAP
+#from hdbscan import HDBSCAN
+#from umap import UMAP
 from konlpy.tag import Mecab
 from omegaconf import OmegaConf
 from sentence_transformers import SentenceTransformer

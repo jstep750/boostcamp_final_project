@@ -64,6 +64,7 @@ def summarize_topic(document_df, topic_num, tokenizer, model): # df와 topic num
         sentences.append(eval(t)[1])
         numbers.append(eval(t)[0])
     result = make_summarization(sentences, tokenizer, model)
+    #print(result)
     avg = sum(numbers)/len(numbers)
     return (avg, result)
 
@@ -84,6 +85,8 @@ def summarize_first_sentences(processed_sentences, tokenizer, model): # 문쟈�
     
 
 def summarize_topk_sentences(processed_sentences, tokenizer, model): # 문쟈열을 k-means로 토픽 별 분류
+    if(len(processed_sentences) == 0):
+        return []
     clusternum = max(len(processed_sentences)//7, 1)
     document_df = get_clustered_df(processed_sentences, clusternum)
     sum_result = []
@@ -106,6 +109,8 @@ def get_clustered_df(sentences, clusternum):
     
     if(len(sentences) < 2):
         document_df['cluster_label'] = 0
+        if(len(document_df) == 0):
+            return []
         ##print('len document df', len(document_df))
         return document_df.sort_values(by=['cluster_label'])
     
@@ -136,6 +141,7 @@ def get_clustered_df(sentences, clusternum):
     
 
 def get_topic_sentences(df, clabel):
+    if len(df) == 0 : return []
     lst = []
     for i,t in enumerate(df[df['cluster_label'] == clabel]['opinion_text']):
         ##print(i, t)

@@ -37,7 +37,12 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
 
     #1. 크롤링
     print("crawl news")
-    news_df = bigkinds_crawl(company_name,date_gte,date_lte) # news_df = ['title','description','url','date']
+    news_df = bigkinds_crawl(company_name,date_gte,date_lte,news_num) # news_df = ['title','description','url','date']
+    if len(news_df) == 0:
+        topic_df = pd.DataFrame()
+        result = json.dumps({"news_df": news_df.to_json(orient = "records",force_ascii=False) ,"topic_df": topic_df.to_json(orient = "records",force_ascii=False)})   
+        return Response(result, media_type="application/json")
+    print("num of news:",len(news_df))
     times[1] = time.time()
     #3. 토픽 분류
     print("start divide topic")
@@ -49,11 +54,14 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     print("summary one sentence")
     topic_df = summary_one_sent(news_df)
     times[3] = time.time()
-
+    
     print("crwal_end")
     print(f'crawl : {times[1] - times[0]}\n BERTtopic: {times[2]-times[1]}\n onesent: {times[3]-times[2]}')
     print(f'total time : {times[3]-times[0]} sec')
-    
+
+    #topic_df.to_csv(f"{company_name}_{date_gte}_{date_lte}_topic.csv",index=False)
+    #topic_df.to_pickle(f"{company_name}_{date_gte}_{date_lte}_topic.pkl")
+
     #5. 한줄요약 반환
     result = json.dumps({"news_df": news_df.to_json(orient = "records",force_ascii=False) ,"topic_df": topic_df.to_json(orient = "records",force_ascii=False)})   
     return Response(result, media_type="application/json")
@@ -71,6 +79,8 @@ async def request_summary_news(request:Request):
         #추출요약
         summary_df = extract_topk_summarization(now_news_df)
         times[1]= time.time()
+        #summary_df.to_csv("IU.csv",index=False)
+        #summary_df.to_pickle("IU.pkl")
         #생성요약
         summary_text = make_summary_paragraph(summary_df)
         times[2]= time.time()
