@@ -10,7 +10,7 @@ def bigkinds_crawl(company_name:str,date_gte:int,date_lte:int,topk:int=9999) -> 
         date_lte(int): 종료일
         news_num(int): 검색 뉴스 수
     output:
-        dataFrame['title','description','titleNdescription','URL','date']
+        dataFrame["title", "titleNdescription", "context", "URL", "date", "category1", "category2"]
     '''
 
     #response = List[{'_index','_type','_id','_score', '_source':{'title','description','titleNdescription','URL','date'}}]
@@ -22,10 +22,8 @@ def bigkinds_crawl(company_name:str,date_gte:int,date_lte:int,topk:int=9999) -> 
         for key, value in response_source.items():
             news_df[key].append(value)
     news_df = pd.DataFrame(news_df)
-    #news_df = news_df.drop(columns = ['titleNdescription'])
-    news_df.rename(columns = {'URL': 'url','titleNdescription':'description'}, inplace = True)
     news_df = news_df.reset_index(drop=True)
-    #news_df = ['title','description','URL','date']
+    
     return news_df
 
 if __name__ == "__main__":

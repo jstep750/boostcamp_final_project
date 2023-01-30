@@ -9,17 +9,8 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from bertopic import BERTopic
-from cuml.cluster import HDBSCAN
-from cuml.manifold import UMAP
-#from hdbscan import HDBSCAN
-#from umap import UMAP
-from konlpy.tag import Mecab
-from omegaconf import OmegaConf
-from sentence_transformers import SentenceTransformer
-from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import normalize
 
-ASSETS_DIR_PATH = os.path.join(Path(__file__).parent, "")
 sys.path.append(ASSETS_DIR_PATH)
 
 
@@ -93,9 +84,7 @@ def getTitleNDescriptions(df: pd.DataFrame) -> List[str]:
     Returns:
         List[str]: title과 description를 합쳐서 List로 반환
     """
-    titles = df["title"].to_list()
-    descriptions = df["description"].to_list()
-    docs = [title + " " + des for title, des in zip(titles, descriptions)]
+    docs = df["titleNdescription"].tolist()
     return docs
 
 def bertopic_modeling(df: pd.DataFrame) -> pd.DataFrame:
@@ -126,7 +115,7 @@ def bertopic_modeling(df: pd.DataFrame) -> pd.DataFrame:
     embeddings = sentence_model.encode(docs, show_progress_bar=False)
 
     # Create instances of GPU-accelerated UMAP and HDBSCAN
-    umap_model = UMAP(n_neighbors=15, n_components=5, min_dist=0.0, metric="cosine")
+    umap_model = UMAP(n_neighbors=15, n_components=5, min_dist=0.0, metric='cosine', random_state=42)
     hdbscan_model = HDBSCAN(
         min_cluster_size=8,
         metric="euclidean",
@@ -193,7 +182,7 @@ def bertopic_modeling(df: pd.DataFrame) -> pd.DataFrame:
     bertopic_df = pd.concat([df, new_topics], axis=1)
 
     output_df = screened_articles(bertopic_df, threshold=0.3)
-
+    output_df = output_df.reset_index(drop=True)
     return output_df
 
 
@@ -205,7 +194,7 @@ if __name__ == "__main__":
 
     # input_df = pd.read_pickle("./윤석열_20221201_20221203_crwal_news_context.pkl")
     # input_df = pd.read_pickle("./윤석열_20221201_20221215_crwal_news_context.pkl")
-    input_df = pd.read_pickle("./윤석열_20221201_20221231_crwal_news_context.pkl")
+    input_df = pd.read_pickle("./삼성전자_20221201_20221203_crwal_news_context.pkl")
     
     print(input_df)
 

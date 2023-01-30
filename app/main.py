@@ -18,6 +18,20 @@ from app.utils.KorBertSum.src.topic_summary import make_summary_paragraph
 from app.utils.SentimentAnalysis.sapipeline import sentiment_analysis
 app = FastAPI()
 
+def split_category_df(news_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    news_df를 category1 기준으로 "경제", "IT_과학", 그 외로 나누는 함수
+    Args:
+        news_df (pd.DataFrame): DB에서 response로 가져온 news_df
+
+    Returns:
+        pd.DataFrame: news_df를 economy_df, it_df, others_df로 나누어서 return
+    """
+    economy_df = news_df[(news_df["category1"] == "경제")]
+    it_df = news_df[(news_df["category1"] == "IT_과학")]
+
+    others_df = news_df[~((news_df["category1"] == "경제")|(news_df["category1"] == "IT_과학"))]
+    return economy_df, it_df, others_df
 
 #크롤링부터 한줄요약까지
 @app.post("/company_name/")
