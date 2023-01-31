@@ -9,12 +9,22 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from bertopic import BERTopic
+from hdbscan import HDBSCAN
+from umap import UMAP
+from konlpy.tag import Mecab
+from omegaconf import OmegaConf
+from sentence_transformers import SentenceTransformer
+from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import normalize
 
+ASSETS_DIR_PATH = os.path.join(Path(__file__).parent, "")
 sys.path.append(ASSETS_DIR_PATH)
 
 
 class CustomTokenizer:
+    """
+    Custom Tokenizer 정의하는 클래스
+    """
     def __init__(self, tagger, stopwords):
         self.tagger = tagger
         self.stopwords = stopwords
@@ -74,33 +84,20 @@ def screened_articles(df, threshold=0.3):
         indexes += list(idx[article_idx])
     return df.iloc[indexes]
 
-
-def getTitleNDescriptions(df: pd.DataFrame) -> List[str]:
-    """
-    pd.dataframe에서 title과 description 컬럼만 합쳐서 List로 반환하는 함수
-    Args:
-        df (pd.DataFrame): input dataframe
-
-    Returns:
-        List[str]: title과 description를 합쳐서 List로 반환
-    """
-    docs = df["titleNdescription"].tolist()
-    return docs
-
 def bertopic_modeling(df: pd.DataFrame) -> pd.DataFrame:
     """
     Bertopic modeling을 진행하는 함수
 
     Args:
-        df (pd.DataFrame): 해당 쿼리에 대한 input dataframe
+        df (pd.DataFrame): 해당 쿼리에 대한 input df
     Returns:
-        pd.DataFrame: bertopic modeling을 통해 나온 topic column + input dataframe
+        pd.DataFrame: bertopic modeling을 통해 나온 topic 컬럼 + input df
     """
     cfg = OmegaConf.load(os.path.join(ASSETS_DIR_PATH, "bertopic_config.yaml"))
     file_cfg = cfg.file
     model_cfg = cfg.model
 
-    docs = getTitleNDescriptions(df)
+    docs = df["titleNdescription"].tolist()
 
     file_path = os.path.join(Path(__file__).parent, file_cfg.stopwords_path)
     f = open(file_path, "r")
@@ -111,11 +108,13 @@ def bertopic_modeling(df: pd.DataFrame) -> pd.DataFrame:
 
     # embedding 생성
     model_name = model_cfg.model_name
-    sentence_model = SentenceTransformer(model_name, device='cuda')
+    sentence_model = SentenceTransformer(model_name, device="cuda")
     embeddings = sentence_model.encode(docs, show_progress_bar=False)
 
     # Create instances of GPU-accelerated UMAP and HDBSCAN
-    umap_model = UMAP(n_neighbors=15, n_components=5, min_dist=0.0, metric='cosine', random_state=42)
+    umap_model = UMAP(
+        n_neighbors=15, n_components=5, min_dist=0.0, metric="cosine", random_state=42
+    )
     hdbscan_model = HDBSCAN(
         min_cluster_size=8,
         metric="euclidean",
@@ -159,19 +158,20 @@ def bertopic_modeling(df: pd.DataFrame) -> pd.DataFrame:
 
     else:
         threshold = 0.6
-        
+
         # 일정 확률이 threshold보다 낮다면 outlier로 만들기
-        while True :
+        while True:
             threshold_topics = [
-                        topic if prob > threshold else -1 for topic, prob in zip(topics, probs)
-                    ]
+                topic if prob > threshold else -1 for topic, prob in zip(topics, probs)
+            ]
 
             # 만약 전부 outlier(-1)라면 threshold 내리기
-            if sum(threshold_topics) == len(topics) * -1 :
+            if sum(threshold_topics) == len(topics) * -1:
                 threshold -= 0.05
-            else : break
-        
-        topics = threshold_topics 
+            else:
+                break
+
+        topics = threshold_topics
 
     end = time.time()
 
@@ -181,9 +181,11 @@ def bertopic_modeling(df: pd.DataFrame) -> pd.DataFrame:
     df = df.reset_index(drop=True)
     bertopic_df = pd.concat([df, new_topics], axis=1)
 
-    output_df = screened_articles(bertopic_df, threshold=0.3)
-    output_df = output_df.reset_index(drop=True)
-    return output_df
+    # 유사한 기사가 맞는지 재확인
+    bertopic_df = screened_articles(bertopic_df, threshold=0.3)
+    bertopic_df = bertopic_df.reset_index(drop=True)
+
+    return bertopic_df
 
 
 if __name__ == "__main__":
@@ -194,8 +196,8 @@ if __name__ == "__main__":
 
     # input_df = pd.read_pickle("./윤석열_20221201_20221203_crwal_news_context.pkl")
     # input_df = pd.read_pickle("./윤석열_20221201_20221215_crwal_news_context.pkl")
-    input_df = pd.read_pickle("./삼성전자_20221201_20221203_crwal_news_context.pkl")
-    
+    input_df = pd.read_pickle("./삼성전자_20221201_20221215_crwal_news_context.pkl")
+
     print(input_df)
 
     print("=" * 100)
