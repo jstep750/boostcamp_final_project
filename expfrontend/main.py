@@ -14,12 +14,12 @@ from annotated_text import annotated_text
 
 # 페이지 타이틀
 st.set_page_config(page_title="News Summarization", layout="wide")
-stock_name_list = pd.read_csv("name_code.csv", index_col=0)
-search_list = pd.read_csv("autocomplete.csv", index_col=0)["name"]
+stock_name_list = pd.read_csv("asset/name_code.csv", index_col=0)
+search_list = pd.read_csv("asset/autocomplete.csv", index_col=0)["name"]
 search_list.loc[0] = ""
 search_list.sort_index(inplace=True)
 
-with open("style.css") as source_css:
+with open("expfrontend/style.css") as source_css:
     st.markdown(f"<style>{source_css.read()}</style>", unsafe_allow_html=True)
     
 # 검색페이지
@@ -37,28 +37,17 @@ def search_page():
             datetime.date(2022, 12, 15),
         )
     page_buttons = []
+
     with search_contain.container():
-        # 검색창
-        # company_name = st.text_input(
-        #     "검색",
-        #     value=st.session_state["company_name"],
-        #     placeholder="회사명 혹은 종목코드를 입력해주세요.",
-        #     label_visibility="collapsed",
-        #     key="company_name",
-        # )
-
-        # 자동완성 기능
-
+        # 검색창 + 자동완성 기능
         empty1, center, empty2 = st.columns([1, 8, 1])
-
+        
         company_name = center.selectbox(
             label="회사명 혹은 종목코드를 입력하세요.",
             options=search_list,
             label_visibility="collapsed",
         )
-
         st.session_state["company_name"] = company_name
-
         # 기간 검색창
         empty1, col0, empty2, col1, col2, empty3 = st.columns([2, 6, 2.5, 4.5, 3, 2])
         # empty1, col1, empty2 = st.columns([13.5, 4.5, 2])
@@ -68,31 +57,20 @@ def search_page():
             label_visibility="collapsed",
             key="search_date",
         )
-
-        # news_num = col1.number_input("뉴스 개수",0, 999,999,label_visibility='collapsed',key = "news_num")
-
-        # 검색어 입력하기 전에는 지수 정보 display
-        if not (st.session_state.company_name != "" and len(search_date) > 1):
-            empty1, center, empty2 = st.columns([0.9, 8, 0.9])
-            with center:
-                index_wiget()
-
+  
         # 검색한 경우
-        elif company_name != "" and len(search_date) > 1:
+        if (st.session_state.before_company_name != "" or st.session_state.before_company_name != "")and len(search_date) > 1:
             empty0 = st.write("")
             # 종목코드로 검색한 경우
             if company_name.isdigit():
                 stock_num = company_name
+                print(stock_name_list[stock_name_list["code"] == int(company_name)])
                 st.session_state["company_name"] = stock_name_list.iloc[stock_name_list[stock_name_list["code"] == int(company_name)].index]["name"].values[0]
             # 회사명으로 검색한 경우
             else:
                 stock_num = stock_name_list.iloc[stock_name_list[stock_name_list["name"] == str(company_name)].index]["code"].values[0]
                 stock_num = f"{int(stock_num):06}"
                 st.session_state["company_name"] = company_name
-
-            print(stock_num)
-            print(company_name)
-            print(st.session_state.company_name)
 
             with col0:
                 stock_wiget(stock_num)
@@ -109,75 +87,81 @@ def search_page():
                 # response = response.json()
                 # news_df = pd.read_json(response["news_df"],orient="records")
                 # topic_df = pd.read_json(response["topic_df"],orient="records")
-                news_df = pd.read_pickle("news_df.pkl")
-                topic_df = pd.read_pickle("topic_df2.pkl")
+                news_df = pd.read_pickle("expfrontend/news_df.pkl")
+                topic_df = pd.read_pickle("expfrontend/topic_df2.pkl")
                 st.session_state["news_df"] = news_df
                 st.session_state["topic_df"] = topic_df
-
-                # f'''뉴스 요약 정보:
-                # 검색된 뉴스 {len(news_df)}개,
-                # 추출 토픽 {len(topic_df)}개'''
-                # summary_info = col2.info(''' ''')
-                col2.info(
-                    f"""
-                    📰 검색된 뉴스 {len(news_df)}개  
-                    🍪 추출 토픽 수 {len(topic_df)}개 
-                    """
-                )  # 🔥
 
             # 뉴스가 없으면 결과가 없다고 반환
             if len(st.session_state["news_df"]) == 0:
                 st.warning("검색 결과가 없습니다.", icon="⚠️")
 
-            # dataframe 보기
-            # st.write(st.session_state["news_df"])
-            # st.write(st.session_state["topic_df"])
+            # f'''뉴스 요약 정보:
+            # 검색된 뉴스 {len(news_df)}개,
+            # 추출 토픽 {len(topic_df)}개'''
+            # summary_info = col2.info(''' ''')
+            col2.info(
+                f"""
+                📰 검색된 뉴스 {len(st.session_state["news_df"])}개  
+                🍪 추출 토픽 수 {len(st.session_state["topic_df"])}개 
+                """
+            )  # 🔥
 
-            colors = ["#8ef", "#faa", "#afa", "#fea"]
-
+            # [경제, 가장 많은 분야, 기타] 세 분류로 나누기
+            topic_df = st.session_state["topic_df"]
             cat1_cnt = Counter(topic_df['category1']).most_common(2)
             most_cat1 = cat1_cnt[0][0] if cat1_cnt[0][0] != '경제' else cat1_cnt[1][0]   
             cate_df_list = list()
             cate_df_list.append(topic_df[topic_df['category1']=='경제'])
             cate_df_list.append(topic_df[topic_df['category1']==most_cat1])
             cate_df_list.append(topic_df[(topic_df['category1'] != '경제') & (topic_df['category1'] != most_cat1)])
+
             # 버튼 추가
             label_to_icon = {"negative": "😕", "neutral": "😐", "positive": "😃"}
             cate_label = ['경제',most_cat1,'기타']
-            empty1, col1, col2, empty2 = st.columns([1, 4, 4, 1])
-            max_idx = len(st.session_state["topic_df"])
-            for idx in range(3):
-                now_cate_label = cate_label[idx]
-                col1, col2 = st.columns([1,15])
-                col1.markdown(f"<div class='test' sytle = 'align-items : center; margin: 0 auto;'>{now_cate_label}</div>", unsafe_allow_html=True)
-            for idx in range(max_idx):
-                topic_sentiment = st.session_state["topic_df"]["sentiment"][idx]
-                topic_number = st.session_state["topic_df"]["topic"][idx]
-                topic_text = st.session_state["topic_df"]["one_sent"][idx]
-                topic_keyword = st.session_state["topic_df"]["keyword"][idx].split("_")
-                page_buttons.append(idx)
-                if idx % 2 == 0:
-                    with col1:
-                        annotated_text(
-                            (topic_keyword[0], "", "#B4C9C7"),
-                            (topic_keyword[1], "", "#F3BFB3"),
-                            (topic_keyword[2], "", "#F7E5B7"),
-                            # (topic_keyword[3], "", "#CAB3C1"),
-                            # (topic_keyword[4], "", "#8A9BA7"),
-                        )
-                    col1.button(label_to_icon[topic_sentiment] + topic_text, key=idx)
+            colors = ["#8ef", "#faa", "#afa", "#fea"]
 
-                else:
-                    with col2:
-                        annotated_text(
-                            (topic_keyword[0], "", "#FFEFFF"),
-                            (topic_keyword[1], "", "#FAD4C0"),
-                            (topic_keyword[2], "", "#D7E2EA"),
-                            # (topic_keyword[3], "", "#E0F8F5"),
-                            # (topic_keyword[4], "", "#EDECF2"),
-                        )
-                    col2.button(label_to_icon[topic_sentiment] + topic_text, key=idx)
+            for idx in range(3):    # [경제, 가장 많은 분야, 기타] 세 카테고리에 대해
+                now_cate_label = cate_label[idx]
+                #카테고리 라벨 출력
+                st.markdown(f"### {now_cate_label}")
+                
+                empty1, col1, col2, empty2 = st.columns([1, 4, 4, 1])
+                #토픽 출력
+                for now_idx, row in cate_df_list[idx].iterrows():
+                    topic_sentiment = row["sentiment"]
+                    topic_number = int(row["topic"])
+                    topic_text = row["one_sent"]
+                    topic_keyword = row["keyword"].split("_")
+
+                    page_buttons.append(topic_number)
+
+                    if now_idx% 2 == 1:
+                        with col1:
+                            annotated_text(
+                                (topic_keyword[0], "", "#B4C9C7"),
+                                (topic_keyword[1], "", "#F3BFB3"),
+                                (topic_keyword[2], "", "#F7E5B7"),
+                                # (topic_keyword[3], "", "#CAB3C1"),
+                                # (topic_keyword[4], "", "#8A9BA7"),
+                            )
+                        col1.button(label_to_icon[topic_sentiment] + topic_text, key=topic_number)
+
+                    else:
+                        with col2:
+                            annotated_text(
+                                (topic_keyword[0], "", "#FFEFFF"),
+                                (topic_keyword[1], "", "#FAD4C0"),
+                                (topic_keyword[2], "", "#D7E2EA"),
+                                # (topic_keyword[3], "", "#E0F8F5"),
+                                # (topic_keyword[4], "", "#EDECF2"),
+                            )
+                        col2.button(label_to_icon[topic_sentiment] + topic_text, key=topic_number)
                 st.write("---") 
+        else:
+            empty1, center, empty2 = st.columns([0.9, 8, 0.9])
+            with center:
+                index_wiget()
     # 요약문 누르면 해당 페이지로
     for button_key in page_buttons:
         if st.session_state[button_key]:
