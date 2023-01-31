@@ -55,7 +55,7 @@ with open("style.css") as source_css:
 
 # 검색페이지
 def search_page():
-    
+
     # Google처럼 어플 제목으로 하는 것이 좋을듯
     st.markdown("<h1 style='text-align: center;'>NEWSUMMARY</h1>", unsafe_allow_html=True)
     search_contain = st.empty()
@@ -95,7 +95,7 @@ def search_page():
 
         # 기간 검색창
         empty1, col0, empty2, col1, col2, empty3 = st.columns([2, 6, 2.5, 4.5, 3, 2])
-        #empty1, col1, empty2 = st.columns([13.5, 4.5, 2])
+        # empty1, col1, empty2 = st.columns([13.5, 4.5, 2])
         search_date = col2.date_input(
             "기간",
             value=st.session_state.before_search_date,
@@ -147,17 +147,18 @@ def search_page():
                 topic_df = pd.read_pickle("topic_df2.pkl")
                 st.session_state["news_df"] = news_df
                 st.session_state["topic_df"] = topic_df
-                
-                #f'''뉴스 요약 정보:
-                # 검색된 뉴스 {len(news_df)}개, 
+
+                # f'''뉴스 요약 정보:
+                # 검색된 뉴스 {len(news_df)}개,
                 # 추출 토픽 {len(topic_df)}개'''
-                #summary_info = col2.info(''' ''')
-                col2.info(f'''
+                # summary_info = col2.info(''' ''')
+                col2.info(
+                    f"""
                     📰 검색된 뉴스 {len(news_df)}개  
                     🍪 추출 토픽 수 {len(topic_df)}개 
-                    ''') # 🔥
-                    
-                
+                    """
+                )  # 🔥
+
             # 뉴스가 없으면 결과가 없다고 반환
             if len(st.session_state["news_df"]) == 0:
                 st.warning("검색 결과가 없습니다.", icon="⚠️")
@@ -167,7 +168,7 @@ def search_page():
             # st.write(st.session_state["topic_df"])
 
             colors = ["#8ef", "#faa", "#afa", "#fea"]
-            
+
             # 버튼 추가
             label_to_icon = {"negative": "😕", "neutral": "😐", "positive": "😃"}
             empty1, col1, col2, empty2 = st.columns([1, 4, 4, 1])
@@ -176,7 +177,7 @@ def search_page():
                 topic_sentiment = st.session_state["topic_df"]["sentiment"][idx]
                 topic_number = st.session_state["topic_df"]["topic"][idx]
                 topic_text = st.session_state["topic_df"]["one_sent"][idx]
-                topic_keyword = st.session_state["topic_df"]["keyword"][idx].split('_')
+                topic_keyword = st.session_state["topic_df"]["keyword"][idx].split("_")
                 page_buttons.append(idx)
                 if idx % 2 == 0:
                     with col1:
@@ -184,19 +185,19 @@ def search_page():
                             (topic_keyword[0], "", "#B4C9C7"),
                             (topic_keyword[1], "", "#F3BFB3"),
                             (topic_keyword[2], "", "#F7E5B7"),
-                            (topic_keyword[3], "", "#CAB3C1"),
-                            (topic_keyword[4], "", "#8A9BA7")
+                            # (topic_keyword[3], "", "#CAB3C1"),
+                            # (topic_keyword[4], "", "#8A9BA7"),
                         )
                     col1.button(label_to_icon[topic_sentiment] + topic_text, key=idx)
-                    
+
                 else:
                     with col2:
                         annotated_text(
                             (topic_keyword[0], "", "#FFEFFF"),
                             (topic_keyword[1], "", "#FAD4C0"),
                             (topic_keyword[2], "", "#D7E2EA"),
-                            (topic_keyword[3], "", "#E0F8F5"),
-                            (topic_keyword[4], "", "#EDECF2")
+                            # (topic_keyword[3], "", "#E0F8F5"),
+                            # (topic_keyword[4], "", "#EDECF2"),
                         )
                     col2.button(label_to_icon[topic_sentiment] + topic_text, key=idx)
 
@@ -227,17 +228,15 @@ def news_page(idx):
     news_df = st.session_state["news_df"]
     news_list = news_df[news_df["topic"] == topic_number]
     news_list = news_list.reset_index(drop=True)
-    
+
     empty1, center, empty2 = st.columns([1, 8, 1])
     empty1, col1, col2, empty2 = st.columns([0.6, 1, 5, 0.1])
     with center.expander("뉴스 링크"):
         for _, row in news_list[:12].iterrows():
-            #empty1, col1, col2, empty2 = st.columns([0.6, 1, 5, 0.1])
-            #col1, col2 = st.columns([1, 5])
-            #st.text(row["date"])
-            st.caption(
-                f"<p>{row['date']} &nbsp&nbsp&nbsp&nbsp <a href='{row['url']}'>{row['title']}</a> </p>", unsafe_allow_html=True
-            )
+            # empty1, col1, col2, empty2 = st.columns([0.6, 1, 5, 0.1])
+            # col1, col2 = st.columns([1, 5])
+            # st.text(row["date"])
+            st.caption(f"<p>{row['date']} &nbsp&nbsp&nbsp&nbsp <a href='{row['url']}'>{row['title']}</a> </p>", unsafe_allow_html=True)
 
     # 요약문
     empty1, center, empty2 = st.columns([1, 8, 1])
@@ -262,6 +261,7 @@ def news_page(idx):
     center.write(summary_text)
     # 키워드
     center.subheader("키워드")
+
 
 def index_wiget():
     html(
