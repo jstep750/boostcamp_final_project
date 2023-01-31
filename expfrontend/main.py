@@ -142,19 +142,25 @@ def search_page():
             # st.write(st.session_state["news_df"])
             # st.write(st.session_state["topic_df"])
 
-            # 버튼 추가
-            label_to_icon = {"negative": "😕", "neutral": "😐", "positive": "😃"}
-            col1, col2 = st.columns([1, 1])
-            max_idx = len(st.session_state["topic_df"])
-            for idx in range(max_idx):
-                topic_sentiment = st.session_state["topic_df"]["sentiment"][idx]
-                topic_number = st.session_state["topic_df"]["topic"][idx]
-                topic_text = st.session_state["topic_df"]["one_sent"][idx]
-                page_buttons.append(idx)
-                if idx % 2 == 0:
-                    col1.button(label_to_icon[topic_sentiment] + topic_text, key=idx)
-                else:
-                    col2.button(label_to_icon[topic_sentiment] + topic_text, key=idx)
+            cat1_cnt = Counter(topic_df['category1']).most_common(2)
+            most_cat1 = cat1_cnt[0][0] if cat1_cnt[0][0] != '경제' else cat1_cnt[1][0]   
+            cate_df_list = list()
+            cate_df_list.append(topic_df[topic_df['category1']=='경제'])
+            cate_df_list.append(topic_df[topic_df['category1']==most_cat1])
+            cate_df_list.append(topic_df[(topic_df['category1'] != '경제') & (topic_df['category1'] != most_cat1)])
+            
+            #버튼 추가  
+            label_to_icon = {"negative":"😕","neutral":"😐","positive":"😃"}
+            cate_label = ['경제',most_cat1,'기타']
+            for idx in range(3):
+                now_cate_label = cate_label[idx]
+                col1, col2 = st.columns([1,15])
+                col1.markdown(f"<div class='test' sytle = 'align-items : center; margin: 0 auto;'>{now_cate_label}</div>", unsafe_allow_html=True)
+                for _, row in cate_df_list[idx].iterrows():
+                    topic_number = int(row['topic'])
+                    topic_text = row['one_sent']
+                    topic_sentiment = row['sentiment']
+                    col2.button(label_to_icon[topic_sentiment] + topic_text,key=topic_number)
 
     # 요약문 누르면 해당 페이지로
     for button_key in page_buttons:
