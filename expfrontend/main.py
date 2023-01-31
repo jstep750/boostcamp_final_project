@@ -6,8 +6,10 @@ import streamlit as st
 from streamlit.components.v1 import html
 
 from confirm_button_hack import cache_on_button_press
-
+from streamlit_elements import elements, mui, sync, lazy
+import streamlit_elements
 import re
+from collections import Counter
 
 # 페이지 타이틀
 st.set_page_config(page_title="News Summarization", layout="wide")
@@ -16,45 +18,11 @@ search_list = pd.read_csv("autocomplete.csv", index_col=0)["name"]
 search_list.loc[0] = ""
 search_list.sort_index(inplace=True)
 
-# 스크롤
-st.markdown(
-    """
-                <html>
-                    <head>
-                    <style>
-                        ::-webkit-scrollbar {
-                            width: 10px;
-                            }
-
-                            /* Track */
-                            ::-webkit-scrollbar-track {
-                            background: #f1f1f1;
-                            }
-
-                            /* Handle */
-                            ::-webkit-scrollbar-thumb {
-                            background: #888;
-                            }
-
-                            /* Handle on hover */
-                            ::-webkit-scrollbar-thumb:hover {
-                            background: #555;
-                            }
-                    </style>
-                    </head>
-                    <body>
-                    </body>
-                </html>
-            """,
-    unsafe_allow_html=True,
-)
-
 with open("style.css") as source_css:
     st.markdown(f"<style>{source_css.read()}</style>", unsafe_allow_html=True)
-
+    
 # 검색페이지
 def search_page():
-    # Google처럼 어플 제목으로 하는 것이 좋을듯
     st.markdown("<h1 style='text-align: center;'>NEWSUMMARY</h1>", unsafe_allow_html=True)
     search_contain = st.empty()
     news_contain = st.empty()
@@ -67,7 +35,6 @@ def search_page():
             datetime.date(2022, 12, 1),
             datetime.date(2022, 12, 15),
         )
-
     page_buttons = []
     with search_contain.container():
         # 검색창
@@ -131,7 +98,7 @@ def search_page():
                 # news_df = pd.read_json(response["news_df"],orient="records")
                 # topic_df = pd.read_json(response["topic_df"],orient="records")
                 news_df = pd.read_pickle("news_df.pkl")
-                topic_df = pd.read_pickle("topic_df.pkl")
+                topic_df = pd.read_pickle("topic_df2.pkl")
                 st.session_state["news_df"] = news_df
                 st.session_state["topic_df"] = topic_df
             # 뉴스가 없으면 결과가 없다고 반환
@@ -161,6 +128,7 @@ def search_page():
                     topic_text = row['one_sent']
                     topic_sentiment = row['sentiment']
                     col2.button(label_to_icon[topic_sentiment] + topic_text,key=topic_number)
+                st.write("---")
 
     # 요약문 누르면 해당 페이지로
     for button_key in page_buttons:
@@ -255,7 +223,7 @@ def index_wiget():
         </script>
         </div>
         <!-- TradingView Widget END -->
-            """
+        """
     )
 
 
