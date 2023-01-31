@@ -98,7 +98,6 @@ async def request_summary_news(request:Request):
         times[1]= time.time()
         #생성요약
         summary_text = make_summary_paragraph(summary_df)
-        summary_text = 
         times[2]= time.time()
         print(f"extract time : {times[1]-times[0]} sec \nparagraph time : {times[2]-times[1]} sec")
     return {"summarization":summary_text}
