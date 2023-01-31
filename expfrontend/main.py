@@ -49,8 +49,31 @@ def search_page():
         )
         st.session_state["company_name"] = company_name
         # 기간 검색창
-        empty1, col0, empty2, col1, col2, empty3 = st.columns([2, 6, 2.5, 4.5, 3, 2])
+        empty1, col0, empty2, col1, col2, empty3 = st.columns([2, 6, 3.5, 3.5, 3, 2])
         # empty1, col1, empty2 = st.columns([13.5, 4.5, 2])
+
+        # checkbox options for article sentiment
+        with empty2:
+            options_sentiment = st.multiselect(
+                "기사 감성 선택",
+                ["긍정", "부정", "중립"],
+                default=["긍정", "부정", "중립"],
+                on_change=None
+            )
+
+        sentiment_color = {'positive':'#4593E7', 'negative':'#E52828', 'neutral':'#21E146'}
+
+        # checkbox options for article category
+        with col1:
+            options_category = st.multiselect(
+                "기사 카테고리 선택",
+                ["정치", "경제", "사회", "문화", "국제", "지역", "스포츠", "IT_과학"],
+                default=["정치", "경제", "사회", "문화", "국제", "지역", "스포츠", "IT_과학"],
+                on_change=None
+            )
+
+        #category_color = {'정치':'', '경제':'', '사회':'', '문화':'', '국제':'', '지역':'', '스포츠':'', 'IT_과학':''}
+
         search_date = col2.date_input(
             "기간",
             value=st.session_state.before_search_date,
@@ -92,6 +115,17 @@ def search_page():
                 st.session_state["news_df"] = news_df
                 st.session_state["topic_df"] = topic_df
 
+                # f'''뉴스 요약 정보:
+                # 검색된 뉴스 {len(news_df)}개,
+                # 추출 토픽 {len(topic_df)}개'''
+                # summary_info = col2.info(''' ''')
+                col2.info(
+                    f"""
+                    📰 검색된 뉴스 {len(news_df)}개  
+                    🍪 추출 토픽 수 {len(topic_df)}개 
+                    """
+                )  # 🔥
+
             # 뉴스가 없으면 결과가 없다고 반환
             if len(st.session_state["news_df"]) == 0:
                 st.warning("검색 결과가 없습니다.", icon="⚠️")
@@ -106,62 +140,77 @@ def search_page():
                 🍪 추출 토픽 수 {len(st.session_state["topic_df"])}개 
                 """
             )  # 🔥
+            # 선택된 카테고리만을 포함하도록 필터링
+            st.session_state['topic_df_filtered'] = st.session_state['topic_df']
+            st.session_state['topic_df_filtered'] = st.session_state['topic_df_filtered'].loc[st.session_state['topic_df_filtered']['category1'].isin(options_category)]
+            
+            # 선택된 감성만 포함하도록 필터링
+            sentiment_dict = {'긍정':'positive', '중립':'neutral', '부정':'negative'}
+            options_sentiment = pd.Series(options_sentiment).map(sentiment_dict).tolist()
+            st.session_state['topic_df_filtered'] = st.session_state['topic_df_filtered'].loc[st.session_state['topic_df_filtered']['sentiment'].isin(options_sentiment)]
+            
+            # sentiment column에 색깔 mapping
+            st.session_state['topic_df_filtered']['sentiment_color'] = st.session_state['topic_df_filtered']['sentiment'].map(sentiment_color)
 
-            # [경제, 가장 많은 분야, 기타] 세 분류로 나누기
-            topic_df = st.session_state["topic_df"]
-            cat1_cnt = Counter(topic_df['category1']).most_common(2)
-            most_cat1 = cat1_cnt[0][0] if cat1_cnt[0][0] != '경제' else cat1_cnt[1][0]   
-            cate_df_list = list()
-            cate_df_list.append(topic_df[topic_df['category1']=='경제'])
-            cate_df_list.append(topic_df[topic_df['category1']==most_cat1])
-            cate_df_list.append(topic_df[(topic_df['category1'] != '경제') & (topic_df['category1'] != most_cat1)])
+            # sory by category
+            st.session_state['topic_df_filtered'] = st.session_state['topic_df_filtered'].sort_values(by=['category1']).reset_index(drop=False)
 
+            colors = ["#8ef", "#faa", "#afa", "#fea"]
             # 버튼 추가
             label_to_icon = {"negative": "😕", "neutral": "😐", "positive": "😃"}
-            cate_label = ['경제',most_cat1,'기타']
-            colors = ["#8ef", "#faa", "#afa", "#fea"]
+            empty1, col1, col2, empty2 = st.columns([1, 4, 4, 1])
+            max_idx = len(st.session_state["topic_df_filtered"])
 
-            for idx in range(3):    # [경제, 가장 많은 분야, 기타] 세 카테고리에 대해
-                now_cate_label = cate_label[idx]
-                #카테고리 라벨 출력
-                st.markdown(f"### {now_cate_label}")
-                
-                empty1, col1, col2, empty2 = st.columns([1, 4, 4, 1])
-                #토픽 출력
-                for now_idx, row in cate_df_list[idx].iterrows():
-                    topic_sentiment = row["sentiment"]
-                    topic_number = int(row["topic"])
-                    topic_text = row["one_sent"]
-                    topic_keyword = row["keyword"].split("_")
+            # topic_df => topic_df_filtered로 전부 교체
+            for idx in range(max_idx):
+                topic_sentiment = st.session_state["topic_df_filtered"]["sentiment"][idx]
+                topic_number = st.session_state["topic_df_filtered"]["topic"][idx]
+                topic_text = st.session_state["topic_df_filtered"]["one_sent"][idx]
+                topic_keyword = st.session_state["topic_df_filtered"]["keyword"][idx].split("_")
 
-                    page_buttons.append(topic_number)
+                # 추가된 부분
+                topic_category = st.session_state["topic_df_filtered"]["category1"][idx]
+                topic_sentiment_color = st.session_state['topic_df_filtered']['sentiment_color'][idx]
+                origin_idx = st.session_state['topic_df_filtered']['index'][idx]
+                # 추가된 부분
 
-                    if now_idx% 2 == 1:
-                        with col1:
-                            annotated_text(
-                                (topic_keyword[0], "", "#B4C9C7"),
-                                (topic_keyword[1], "", "#F3BFB3"),
-                                (topic_keyword[2], "", "#F7E5B7"),
-                                # (topic_keyword[3], "", "#CAB3C1"),
-                                # (topic_keyword[4], "", "#8A9BA7"),
-                            )
-                        col1.button(label_to_icon[topic_sentiment] + topic_text, key=topic_number)
+                page_buttons.append(origin_idx)
+                if idx % 2 == 0:
+                    with col1:
+                        annotated_text(
+                            (topic_category, "Category", "#D1C9AC"),
+                            (f"{label_to_icon[topic_sentiment]}", "Sentiment", topic_sentiment_color)
+                            #f"{label_to_icon[topic_sentiment]}"
+                            # (topic_keyword[4], "", "#8A9BA7"),
+                        )
+                    with col1:
+                        annotated_text(
+                            (topic_keyword[0], "", "#B4C9C7"),
+                            (topic_keyword[1], "", "#F3BFB3"),
+                            (topic_keyword[2], "", "#F7E5B7"),
+                            # (topic_keyword[4], "", "#8A9BA7"),
+                        )
+                    col1.button(topic_text, key=origin_idx)
+                    
+                    
 
-                    else:
-                        with col2:
-                            annotated_text(
-                                (topic_keyword[0], "", "#FFEFFF"),
-                                (topic_keyword[1], "", "#FAD4C0"),
-                                (topic_keyword[2], "", "#D7E2EA"),
-                                # (topic_keyword[3], "", "#E0F8F5"),
-                                # (topic_keyword[4], "", "#EDECF2"),
-                            )
-                        col2.button(label_to_icon[topic_sentiment] + topic_text, key=topic_number)
-                st.write("---") 
-        else:
-            empty1, center, empty2 = st.columns([0.9, 8, 0.9])
-            with center:
-                index_wiget()
+                else:
+                    with col2:
+                        annotated_text(
+                            (topic_category, "Category", "#D1C9AC"),
+                            (f"{label_to_icon[topic_sentiment]}", "Sentiment", topic_sentiment_color)
+                            #f"{label_to_icon[topic_sentiment]}"
+                            # (topic_keyword[4], "", "#8A9BA7"),
+                        )
+                    with col2:
+                        annotated_text(
+                            (topic_keyword[0], "", "#B4C9C7"),
+                            (topic_keyword[1], "", "#F3BFB3"),
+                            (topic_keyword[2], "", "#F7E5B7"),
+                            # (topic_keyword[4], "", "#8A9BA7"),
+                        )
+                    col2.button(topic_text, key=origin_idx)
+
     # 요약문 누르면 해당 페이지로
     for button_key in page_buttons:
         if st.session_state[button_key]:
