@@ -10,6 +10,7 @@ from streamlit_elements import elements, mui, sync, lazy
 import streamlit_elements
 import re
 from collections import Counter
+from annotated_text import annotated_text
 
 # 페이지 타이틀
 st.set_page_config(page_title="News Summarization", layout="wide")
@@ -47,14 +48,20 @@ def search_page():
         # )
 
         # 자동완성 기능
-        company_name = st.selectbox(
+
+        empty1, center, empty2 = st.columns([1, 8, 1])
+
+        company_name = center.selectbox(
             label="회사명 혹은 종목코드를 입력하세요.",
             options=search_list,
             label_visibility="collapsed",
         )
 
+        st.session_state["company_name"] = company_name
+
         # 기간 검색창
-        _, col1, col2 = st.columns([15, 1, 2])
+        empty1, col0, empty2, col1, col2, empty3 = st.columns([2, 6, 2.5, 4.5, 3, 2])
+        # empty1, col1, empty2 = st.columns([13.5, 4.5, 2])
         search_date = col2.date_input(
             "기간",
             value=st.session_state.before_search_date,
@@ -65,10 +72,14 @@ def search_page():
         # news_num = col1.number_input("뉴스 개수",0, 999,999,label_visibility='collapsed',key = "news_num")
 
         # 검색어 입력하기 전에는 지수 정보 display
-        if not (company_name != "" and len(search_date) > 1):
-            index_wiget()
+        if not (st.session_state.company_name != "" and len(search_date) > 1):
+            empty1, center, empty2 = st.columns([0.9, 8, 0.9])
+            with center:
+                index_wiget()
+
         # 검색한 경우
         elif company_name != "" and len(search_date) > 1:
+            empty0 = st.write("")
             # 종목코드로 검색한 경우
             if company_name.isdigit():
                 stock_num = company_name
@@ -83,7 +94,8 @@ def search_page():
             print(company_name)
             print(st.session_state.company_name)
 
-            stock_wiget(stock_num)
+            with col0:
+                stock_wiget(stock_num)
 
             # 검색어나 검색기간이 바뀌면 new데이터 새로 받기
             if st.session_state.before_company_name != st.session_state.company_name or st.session_state.before_search_date != st.session_state.search_date:
@@ -101,6 +113,18 @@ def search_page():
                 topic_df = pd.read_pickle("topic_df2.pkl")
                 st.session_state["news_df"] = news_df
                 st.session_state["topic_df"] = topic_df
+
+                # f'''뉴스 요약 정보:
+                # 검색된 뉴스 {len(news_df)}개,
+                # 추출 토픽 {len(topic_df)}개'''
+                # summary_info = col2.info(''' ''')
+                col2.info(
+                    f"""
+                    📰 검색된 뉴스 {len(news_df)}개  
+                    🍪 추출 토픽 수 {len(topic_df)}개 
+                    """
+                )  # 🔥
+
             # 뉴스가 없으면 결과가 없다고 반환
             if len(st.session_state["news_df"]) == 0:
                 st.warning("검색 결과가 없습니다.", icon="⚠️")
@@ -109,27 +133,51 @@ def search_page():
             # st.write(st.session_state["news_df"])
             # st.write(st.session_state["topic_df"])
 
+            colors = ["#8ef", "#faa", "#afa", "#fea"]
+
             cat1_cnt = Counter(topic_df['category1']).most_common(2)
             most_cat1 = cat1_cnt[0][0] if cat1_cnt[0][0] != '경제' else cat1_cnt[1][0]   
             cate_df_list = list()
             cate_df_list.append(topic_df[topic_df['category1']=='경제'])
             cate_df_list.append(topic_df[topic_df['category1']==most_cat1])
             cate_df_list.append(topic_df[(topic_df['category1'] != '경제') & (topic_df['category1'] != most_cat1)])
-            
-            #버튼 추가  
-            label_to_icon = {"negative":"😕","neutral":"😐","positive":"😃"}
+            # 버튼 추가
+            label_to_icon = {"negative": "😕", "neutral": "😐", "positive": "😃"}
             cate_label = ['경제',most_cat1,'기타']
+            empty1, col1, col2, empty2 = st.columns([1, 4, 4, 1])
+            max_idx = len(st.session_state["topic_df"])
             for idx in range(3):
                 now_cate_label = cate_label[idx]
                 col1, col2 = st.columns([1,15])
                 col1.markdown(f"<div class='test' sytle = 'align-items : center; margin: 0 auto;'>{now_cate_label}</div>", unsafe_allow_html=True)
-                for _, row in cate_df_list[idx].iterrows():
-                    topic_number = int(row['topic'])
-                    topic_text = row['one_sent']
-                    topic_sentiment = row['sentiment']
-                    col2.button(label_to_icon[topic_sentiment] + topic_text,key=topic_number)
-                st.write("---")
+            for idx in range(max_idx):
+                topic_sentiment = st.session_state["topic_df"]["sentiment"][idx]
+                topic_number = st.session_state["topic_df"]["topic"][idx]
+                topic_text = st.session_state["topic_df"]["one_sent"][idx]
+                topic_keyword = st.session_state["topic_df"]["keyword"][idx].split("_")
+                page_buttons.append(idx)
+                if idx % 2 == 0:
+                    with col1:
+                        annotated_text(
+                            (topic_keyword[0], "", "#B4C9C7"),
+                            (topic_keyword[1], "", "#F3BFB3"),
+                            (topic_keyword[2], "", "#F7E5B7"),
+                            # (topic_keyword[3], "", "#CAB3C1"),
+                            # (topic_keyword[4], "", "#8A9BA7"),
+                        )
+                    col1.button(label_to_icon[topic_sentiment] + topic_text, key=idx)
 
+                else:
+                    with col2:
+                        annotated_text(
+                            (topic_keyword[0], "", "#FFEFFF"),
+                            (topic_keyword[1], "", "#FAD4C0"),
+                            (topic_keyword[2], "", "#D7E2EA"),
+                            # (topic_keyword[3], "", "#E0F8F5"),
+                            # (topic_keyword[4], "", "#EDECF2"),
+                        )
+                    col2.button(label_to_icon[topic_sentiment] + topic_text, key=idx)
+                st.write("---") 
     # 요약문 누르면 해당 페이지로
     for button_key in page_buttons:
         if st.session_state[button_key]:
@@ -143,8 +191,11 @@ def news_page(idx):
     # 한줄요약(제목)
     topics_text = st.session_state["topic_df"]["one_sent"][idx]
     topic_number = int(st.session_state["topic_df"]["topic"][idx])
-    st.subheader(topics_text)
-    _, col2 = st.columns([7, 1])
+    empty0 = st.write("")
+
+    empty1, center, empty2 = st.columns([1, 8, 1])
+    center.subheader(topics_text)
+    empty1, _, col2, empty2 = st.columns([1, 7, 1, 1])
     back_button = col2.button("back")
     if back_button:
         page_buttons.clear()
@@ -154,14 +205,19 @@ def news_page(idx):
     news_df = st.session_state["news_df"]
     news_list = news_df[news_df["topic"] == topic_number]
     news_list = news_list.reset_index(drop=True)
-    with st.expander("뉴스 링크"):
+
+    empty1, center, empty2 = st.columns([1, 8, 1])
+    empty1, col1, col2, empty2 = st.columns([0.6, 1, 5, 0.1])
+    with center.expander("뉴스 링크"):
         for _, row in news_list[:12].iterrows():
-            col1, col2 = st.columns([1, 5])
-            col1.text(row["date"])
-            col2.caption(f"<a href='{row['url']}'>{row['title']}</a>", unsafe_allow_html=True)
+            # empty1, col1, col2, empty2 = st.columns([0.6, 1, 5, 0.1])
+            # col1, col2 = st.columns([1, 5])
+            # st.text(row["date"])
+            st.caption(f"<p>{row['date']} &nbsp&nbsp&nbsp&nbsp <a href='{row['url']}'>{row['title']}</a> </p>", unsafe_allow_html=True)
 
     # 요약문
-    st.subheader("요약문")
+    empty1, center, empty2 = st.columns([1, 8, 1])
+    center.subheader("요약문")
     now_news_df = news_list[["context"]]
     now_news_json = now_news_df.to_json(orient="columns", force_ascii=False)
     # summarization = requests.post(f"http://localhost:8001/summary/",json=now_news_json)
@@ -179,9 +235,9 @@ def news_page(idx):
 
     지난 3월 주주총회 이후 사외이사 4명, 사내이사 5명으로 이사회를 운영해 오던 삼성전자가 5월 박병국 사외이사가 5월 별세하고 한화진 사외이사가 새 정부의 초대 환경부 직을 맡으면서 사임해 6명의 사외이사 중 결원 2명이 생겼다고 밝히며 임시 주주총회를 개최했다. 학회 부회장, 한국혁신학회 회장, 학회 회장을 역임한 에너지 전문가인 맛허 사외이사는 전문가다.
     """
-    st.write(summary_text)
+    center.write(summary_text)
     # 키워드
-    st.subheader("키워드")
+    center.subheader("키워드")
 
 
 def index_wiget():
@@ -230,7 +286,7 @@ def index_wiget():
 def stock_wiget(stock_num):
     info = """
     "symbol": "KRX:{0}",
-    "width": "55%",
+    "width": "100%",
     "height": "100%",
     "locale": "kr",
     "dateRange": "3M",
