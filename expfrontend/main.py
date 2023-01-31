@@ -309,7 +309,7 @@ def index_wiget():
 def stock_wiget(stock_num):
     info = """
     "symbol": "KRX:{0}",
-    "width": "55%",
+    "width": "100%",
     "height": "100%",
     "locale": "kr",
     "dateRange": "3M",
