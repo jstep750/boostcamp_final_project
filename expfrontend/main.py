@@ -57,9 +57,7 @@ with open("style.css") as source_css:
 def search_page():
     
     # Google처럼 어플 제목으로 하는 것이 좋을듯
-    st.markdown(
-        "<h1 style='text-align: center;'>NEWSUMMARY</h1>", unsafe_allow_html=True
-    )
+    st.markdown("<h1 style='text-align: center;'>NEWSUMMARY</h1>", unsafe_allow_html=True)
     search_contain = st.empty()
     news_contain = st.empty()
     if "company_name" not in st.session_state:
@@ -114,34 +112,27 @@ def search_page():
                 index_wiget()
 
         # 검색한 경우
-        elif st.session_state.company_name != "" and len(search_date) > 1:
+        elif company_name != "" and len(search_date) > 1:
             empty0 = st.write("")
-
-            # 띄어쓰기 제거
-            company_name = str(company_name).replace(" ", "")
-            company_name = company_name.upper()
-
             # 종목코드로 검색한 경우
             if company_name.isdigit():
-                stock_num = f"{int(company_name):06}"
-                company_name = stock_name_list.iloc[
-                    stock_name_list[stock_name_list["code"] == int(company_name)].index
-                ]["name"].values[0]
+                stock_num = company_name
+                st.session_state["company_name"] = stock_name_list.iloc[stock_name_list[stock_name_list["code"] == int(company_name)].index]["name"].values[0]
             # 회사명으로 검색한 경우
             else:
-                stock_num = stock_name_list.iloc[
-                    stock_name_list[stock_name_list["name"] == str(company_name)].index
-                ]["code"].values[0]
+                stock_num = stock_name_list.iloc[stock_name_list[stock_name_list["name"] == str(company_name)].index]["code"].values[0]
                 stock_num = f"{int(stock_num):06}"
+                st.session_state["company_name"] = company_name
+
+            print(stock_num)
+            print(company_name)
+            print(st.session_state.company_name)
 
             with col0:
                 stock_wiget(stock_num)
 
             # 검색어나 검색기간이 바뀌면 new데이터 새로 받기
-            if (
-                st.session_state.before_company_name != st.session_state.company_name
-                or st.session_state.before_search_date != st.session_state.search_date
-            ):
+            if st.session_state.before_company_name != st.session_state.company_name or st.session_state.before_search_date != st.session_state.search_date:
                 st.session_state.before_company_name = st.session_state.company_name
                 st.session_state.before_search_date = st.session_state.search_date
 
@@ -245,7 +236,7 @@ def news_page(idx):
             #col1, col2 = st.columns([1, 5])
             #st.text(row["date"])
             st.caption(
-                f"<p>{row['date']} &nbsp&nbsp&nbsp <a href='{row['url']}'>{row['title']}</a> </p>", unsafe_allow_html=True
+                f"<p>{row['date']} &nbsp&nbsp&nbsp&nbsp <a href='{row['url']}'>{row['title']}</a> </p>", unsafe_allow_html=True
             )
 
     # 요약문
@@ -318,8 +309,8 @@ def index_wiget():
 def stock_wiget(stock_num):
     info = """
     "symbol": "KRX:{0}",
-    "width": "350",
-    "height": "220",
+    "width": "55%",
+    "height": "100%",
     "locale": "kr",
     "dateRange": "3M",
     "colorTheme": "light",
