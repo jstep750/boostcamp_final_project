@@ -1,23 +1,25 @@
 from transformers import PreTrainedTokenizerFast, BartForConditionalGeneration
 from collections import Counter
-<<<<<<< HEAD
-=======
 from konlpy.tag import Komoran
->>>>>>> origin/feat/widget
 
 import torch
 import time
 import pandas as pd
-
+from tqdm import tqdm
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 tokenizer = PreTrainedTokenizerFast.from_pretrained("digit82/kobart-summarization")
 model = BartForConditionalGeneration.from_pretrained("digit82/kobart-summarization")
 
+import os
+import sys
+from pathlib import Path
+ASSETS_DIR_PATH = os.path.join(Path(__file__).parent, "")
+sys.path.append(ASSETS_DIR_PATH)
 # 형태소 분석기
-kom = Komoran(userdic="./custom_dict.txt")
+kom = Komoran(userdic=os.path.join(Path(__file__).parent, "custom_dict.txt"))
 # 불용어 가져오기
-f = open("stop_words.txt")
+f = open(os.path.join(Path(__file__).parent, "stop_words.txt"))
 stopwords = f.read().splitlines()
 
 
@@ -26,19 +28,6 @@ class SummaryGenerater:
         self.model = model
         self.tokenizer = tokenizer
         self.model.to(device)
-<<<<<<< HEAD
-    
-    def hardVotingCategory(self, df: pd.DataFrame) -> pd.DataFrame :
-        topic_idx = df["topic"].unique().tolist()
-        hard_category1 = []
-        hard_category2 = []
-
-        for i in topic_idx :
-            category1_list = df[(df["topic"])== i]['category1'].tolist()
-            category2_list = df[(df["topic"])== i]['category2'].tolist()
-
-            category = [c1 + ',' + c2 for c1, c2 in zip(category1_list, category2_list)]
-=======
 
     def hardVotingCategory(self, df: pd.DataFrame) -> pd.DataFrame:
         topic_idx = sorted(df["topic"].unique())
@@ -50,23 +39,10 @@ class SummaryGenerater:
             category2_list = df[(df["topic"]) == i]["category2"].tolist()
 
             category = [c1 + "," + c2 for c1, c2 in zip(category1_list, category2_list)]
->>>>>>> origin/feat/widget
             max_category = Counter(category).most_common(1)[0][0]
 
             max_category1, max_category2 = max_category.split(",")
 
-<<<<<<< HEAD
-            hard_category1 += [max_category1] 
-            hard_category2 += [max_category2]
-        
-        hard_category1 = pd.Series(hard_category1, name="hard_category1")
-        hard_category2 = pd.Series(hard_category2, name="hard_category2")
-        
-        hard_category_df = pd.concat([hard_category1, hard_category2], axis=1)
-        return hard_category_df
-
-    def summary(self, df):
-=======
             hard_category1 += [max_category1]
             hard_category2 += [max_category2]
 
@@ -79,19 +55,24 @@ class SummaryGenerater:
     def keywords(self, df: pd.DataFrame) -> pd.DataFrame:
         topic_idx = sorted(df["topic"].unique())
         keywords_list = []
-        concat_text = ""
+        #print(f"#topic: {len(topic_idx)}")
         for topic in topic_idx:
+            concat_text = ""
             for text in df[df["topic"] == topic]["context"]:
                 concat_text += " ".join(text)
+            #time2= time.time()
             noun = [n[0] for n in kom.pos(concat_text) if n[1] == "NNP" and len(n[0]) > 1 and n[0] not in stopwords]
+            #time3= time.time()
+            #print(f"{topic} - #new: {len(df[df['topic'] == topic])} kom: {time3-time2}, len of kom:{len(noun)}")
             count = Counter(noun)
+            #print(count.most_common(5))
             freq_vocab = [n for n, _ in count.most_common(3)]
             freq_vocab = "_".join(freq_vocab)
             keywords_list.append(freq_vocab)
+
         return pd.DataFrame(columns=["keywords"], data=keywords_list)
 
     def summary(self, df: pd.DataFrame) -> pd.DataFrame:
->>>>>>> origin/feat/widget
         summary_dict = {}
         topic_idx = sorted(df["topic"].unique())
 
@@ -110,21 +91,11 @@ class SummaryGenerater:
             # print("================")
             # print(topic_n, summary_text)
             # print(f'{(time.time() - s):0.2f} sec')
-<<<<<<< HEAD
-        summary_df = pd.DataFrame(data={'topic': summary_dict.keys(),
-                                        'one_sent': summary_dict.values()})
-
-        hard_category_df = self.hardVotingCategory(df)
-
-        summary_df = pd.concat([summary_df, hard_category_df], axis=1)
-=======
         summary_df = pd.DataFrame(data={"topic": summary_dict.keys(), "one_sent": summary_dict.values()})
-
         hard_category_df = self.hardVotingCategory(df)
         keywords_df = self.keywords(df)
 
         summary_df = pd.concat([summary_df, hard_category_df, keywords_df], axis=1)
->>>>>>> origin/feat/widget
 
         return summary_df
 
@@ -138,7 +109,7 @@ def summary_one_sent(df):
 
 
 if __name__ == "__main__":
-    news_df = pd.read_pickle("/opt/ml/final-project-level3-nlp-05/after_bertopic.pkl")
+    news_df = pd.read_pickle("news_df.pkl")
     topic_df = pd.DataFrame()
     # 토픽번호에 맞는 데이터만 가져오기
     print("total topic num : ", set(news_df["topic"]))

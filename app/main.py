@@ -52,7 +52,8 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     #1. 크롤링
     print("crawl news")
     news_df = bigkinds_crawl(company_name,date_gte,date_lte,news_num) # news_df = ['title','description','url','date']
-    if len(news_df) == 0:
+    if len(news_df) < 10:
+        news_df = pd.DataFrame()
         topic_df = pd.DataFrame()
         result = json.dumps({"news_df": news_df.to_json(orient = "records",force_ascii=False) ,"topic_df": topic_df.to_json(orient = "records",force_ascii=False)})   
         return Response(result, media_type="application/json")
@@ -64,7 +65,7 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     news_df = bertopic_modeling(news_df)
     news_df.to_pickle(f"{company_name}_{date_gte}_{date_lte}_news_df.pkl")
     times[2] = time.time()
-
+    print(news_df.columns)
     #4. 한줄요약
     print("summary one sentence")
     topic_df = summary_one_sent(news_df)
@@ -78,6 +79,7 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
 
     #topic_df.to_csv(f"{company_name}_{date_gte}_{date_lte}_topic.csv",index=False)
     #topic_df.to_pickle(f"{company_name}_{date_gte}_{date_lte}_topic.pkl")
+    #news_df.to_csv(f"{company_name}_{date_gte}_{date_lte}_news.csv",index=False)
     #news_df.to_pickle(f"{company_name}_{date_gte}_{date_lte}_news_df.pkl")
     #5. 한줄요약 반환
     result = json.dumps({"news_df": news_df.to_json(orient = "records",force_ascii=False) ,"topic_df": topic_df.to_json(orient = "records",force_ascii=False)})   
