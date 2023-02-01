@@ -2698,3 +2698,6 @@ PN풍년	NNP
 흥아해운	NNP
 희림	NNP
 힘스	NNP
+네이버	NNP
+넥슨	NNP
+씨제이	NNP
