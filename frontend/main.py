@@ -212,9 +212,8 @@ def news_page(idx):
     summarization = requests.post(f"http://localhost:8001/summary/",json=now_news_json)
     summary_text = summarization.json()["summarization"]
     center.write(summary_text)
-    # 키워드
-    # center.subheader("키워드")
-
+    
+    
 
 def index_wiget():
     html(

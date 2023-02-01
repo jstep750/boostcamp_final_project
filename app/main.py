@@ -12,7 +12,7 @@ from fastapi.encoders import jsonable_encoder
 from omegaconf import OmegaConf
 from app.utils.Bigkindscrawl import bigkinds_crawl
 from app.utils.BERTopic.bertopic_model import bertopic_modeling
-from app.utils.One_sent_summarization import summary_one_sent
+from app.utils.One_sent_summary.one_sent_summarization import summary_one_sent
 from app.utils.KorBertSum.src.extract_topk_summarization import extract_topk_summarization
 from app.utils.KorBertSum.src.topic_summary import make_summary_paragraph
 from app.utils.SentimentAnalysis.sapipeline import sentiment_analysis
@@ -64,7 +64,6 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
     #cfg = OmegaConf.load(f"./app/config/bertopic_config.yaml")
     news_df = bertopic_modeling(news_df)
     times[2] = time.time()
-    print(news_df.columns)
     #4. 한줄요약
     print("summary one sentence")
     topic_df = summary_one_sent(news_df)
@@ -103,12 +102,3 @@ async def request_summary_news(request:Request):
         print(f"extract time : {times[1]-times[0]} sec \nparagraph time : {times[2]-times[1]} sec")
     return {"summarization":summary_text}
     
-# 키워드 출력
-@app.get("/keyword/{topic_number}")
-def request_keyword_news(topic_number:int):
-    #토픽 뉴스 수집
-
-    # 키워드 뽑기
-
-    #return = {"keyword": [keyword1, keyword2, ...]}
-    return {"ans": "ans"}
