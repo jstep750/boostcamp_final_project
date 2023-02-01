@@ -213,7 +213,7 @@ def news_page(idx):
     summary_text = summarization.json()["summarization"]
     center.write(summary_text)
     # 키워드
-    center.subheader("키워드")
+    # center.subheader("키워드")
 
 
 def index_wiget():
