@@ -57,13 +57,12 @@ def request_crawl_news(company_name:str, date_gte:int,date_lte:int,news_num:int 
         topic_df = pd.DataFrame()
         result = json.dumps({"news_df": news_df.to_json(orient = "records",force_ascii=False) ,"topic_df": topic_df.to_json(orient = "records",force_ascii=False)})   
         return Response(result, media_type="application/json")
-    print("num of news:",len(news_df))
+    #print("num of news:",len(news_df))
     times[1] = time.time()
     #3. 토픽 분류
     print("start divide topic")
     #cfg = OmegaConf.load(f"./app/config/bertopic_config.yaml")
     news_df = bertopic_modeling(news_df)
-    news_df.to_pickle(f"{company_name}_{date_gte}_{date_lte}_news_df.pkl")
     times[2] = time.time()
     print(news_df.columns)
     #4. 한줄요약
