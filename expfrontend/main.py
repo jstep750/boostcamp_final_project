@@ -54,9 +54,11 @@ def search_page():
             key = 'company_name'
         )
         
+        _, sentiment_col, category_col, _ = st.columns([1, 3, 5, 1])
         _, col0, col1, col2, col3, _ = st.columns([2, 6, 3.5, 3.5, 3, 2])
+        
         # checkbox options for article sentiment
-        col1.multiselect(
+        sentiment_col.multiselect(
             "기사 감성 선택",
             ["긍정", "부정", "중립"],
             default=state['options_sentiment'],
@@ -64,13 +66,14 @@ def search_page():
             key="options_sentiment"
         )
         # checkbox options for article category
-        col2.multiselect(
+        category_col.multiselect(
             "기사 카테고리 선택",
             ["정치", "경제", "사회", "문화", "국제", "지역", "스포츠", "IT_과학"],
             default=state['options_category'],
             on_change=None,
             key = 'options_category'
         )
+
         # 기간 검색창
         col3.date_input(
             "기간",
@@ -82,6 +85,8 @@ def search_page():
         
         # 검색한 경우
         if (state.before_company_name != "" or state.company_name != "")and len(state.search_date) > 1:
+            
+
             # 검색어나 검색기간이 바뀌면 new데이터 새로 받기
             if state.company_name != "" and (state.before_company_name != state.company_name or state.before_search_date != state.search_date):
                 state.before_company_name = state.company_name
@@ -132,35 +137,45 @@ def search_page():
             topic_df_filtered = topic_df_filtered.loc[topic_df_filtered['sentiment'].isin(options_sentiment)]
             # sort by category
             category1_sort_list = list(Counter(topic_df_filtered['category1']).keys())
+            counter = Counter(topic_df_filtered['category1'])
+            emoji = {"정치":'🏛', "경제":'💰', "사회":'🤷', "문화":'🎎', "국제":'🌐', "지역":'🚞', "스포츠":'⚽', "IT_과학":'🔬'}
+            category1_sort_list2 = []
             if '경제' in category1_sort_list: 
                 category1_sort_list.remove('경제')
                 category1_sort_list = ['경제'] + category1_sort_list
-            
-            for cat1 in category1_sort_list:
-                now_topic_df = topic_df_filtered[topic_df_filtered['category1'] == cat1]
-                now_topic_df = now_topic_df.sort_values(by=['sentiment'],ascending=False).reset_index(drop=False)
-                cols = [0,0]
-                _, cols[0], cols[1], _ = st.columns([1, 4, 4, 1])
-                for idx, row in now_topic_df.iterrows():
-                    topic_number = int(row["topic"])
-                    topic_keyword = row["keyword"].split("_")
+            for cat in category1_sort_list:
+                category1_sort_list2.append(emoji[cat]+' '+cat+f'({counter[cat]})')
 
-                    page_buttons.append(topic_number)
-                    now_idx = idx % 2
-                    with cols[now_idx]:
-                        annotated_text(
-                            (row["category1"], "Category", "#D1C9AC"),
-                            (f"{label_to_icon[row['sentiment']]}", "Sentiment", sentiment_color[row["sentiment"]])
-                            #f"{label_to_icon[topic_sentiment]}"
-                            # (topic_keyword[4], "", "#8A9BA7"),
-                        )
-                        annotated_text(
-                            (topic_keyword[0], "", "#B4C9C7"),
-                            (topic_keyword[1], "", "#F3BFB3"),
-                            (topic_keyword[2], "", "#F7E5B7"),
-                            # (topic_keyword[4], "", "#8A9BA7"),
-                        )
-                    cols[now_idx].button(row["one_sent"], key=topic_number)
+            category_tab_list = st.tabs(category1_sort_list2)
+            for tab, cat1 in zip(category_tab_list, category1_sort_list):
+                with tab:
+                #for cat1 in category1_sort_list:
+                    now_topic_df = topic_df_filtered[topic_df_filtered['category1'] == cat1]
+                    now_topic_df = now_topic_df.sort_values(by=['sentiment'],ascending=False).reset_index(drop=False)
+                    cols = [0,0]
+                    cols[0], cols[1] = st.columns([4, 4])
+                    #_, cols[0], cols[1], _ = st.columns([1, 4, 4, 1])
+                    for idx, row in now_topic_df.iterrows():
+                        topic_number = int(row["topic"])
+                        topic_keyword = row["keyword"].split("_")
+
+                        page_buttons.append(topic_number)
+                        now_idx = idx % 2
+                        with cols[now_idx]:
+                            annotated_text(
+                                (row["category1"], "Category", "#D1C9AC"),
+                                (f"{label_to_icon[row['sentiment']]}", "Sentiment", sentiment_color[row["sentiment"]])
+                                #f"{label_to_icon[topic_sentiment]}"
+                                # (topic_keyword[4], "", "#8A9BA7"),
+                            )
+                            annotated_text(
+                                (topic_keyword[0], "", "#B4C9C7"),
+                                (topic_keyword[1], "", "#F3BFB3"),
+                                (topic_keyword[2], "", "#F7E5B7"),
+                                # (topic_keyword[4], "", "#8A9BA7"),
+                            )
+                        cols[now_idx].button(row["one_sent"], key=topic_number)
+                    st.write('---')
         else:
             empty1, center, empty2 = st.columns([0.9, 8, 0.9])
             with center:
