@@ -155,13 +155,13 @@ def search_page():
                                 (row["hard_category1"], "Category", "#D1C9AC"),
                                 (f"{label_to_icon[row['sentiment']]}", "Sentiment", sentiment_color[row["sentiment"]])
                                 #f"{label_to_icon[topic_sentiment]}"
-                                # (topic_keyword[4], "", "#8A9BA7"),
+                                # (topic_keyword[4], "", "#F7E5B7"),
                             )
                             annotated_text(
                                 (topic_keyword[0], "", "#B4C9C7"),
                                 (topic_keyword[1], "", "#F3BFB3"),
-                                (topic_keyword[2], "", "#F7E5B7"),
-                                # (topic_keyword[4], "", "#8A9BA7"),
+                                (topic_keyword[2], "", "#8A9BA7"),
+                                # (topic_keyword[4], "", "#F7E5B7"),
                             )
                         cols[now_idx].button(row["one_sent"], key=topic_number)
                     _, col_line, _ = st.columns([1, 8, 1])
