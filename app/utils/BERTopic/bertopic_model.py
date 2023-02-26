@@ -1,38 +1,35 @@
-import re
+import argparse
+import os
+import sys
 import time
+from pathlib import Path
 from typing import List
 
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
+import networkx as nx
 import numpy as np
 import pandas as pd
 from bertopic import BERTopic
-from bertopic.vectorizers import ClassTfidfTransformer
 from hdbscan import HDBSCAN
+from umap import UMAP
 from konlpy.tag import Mecab
-
+from omegaconf import OmegaConf
 from sentence_transformers import SentenceTransformer
 from sklearn.feature_extraction.text import CountVectorizer
-from tqdm import tqdm
-from umap import UMAP
+from sklearn.preprocessing import normalize
 
-import argparse
-from omegaconf import OmegaConf
-
-import os
-import sys
-from pathlib import Path
 ASSETS_DIR_PATH = os.path.join(Path(__file__).parent, "")
 sys.path.append(ASSETS_DIR_PATH)
-from bertopic_preprocessing import *
+
 
 class CustomTokenizer:
+    """
+    Custom Tokenizer 정의하는 클래스
+    """
     def __init__(self, tagger, stopwords):
         self.tagger = tagger
         self.stopwords = stopwords
 
     def __call__(self, sent):
-        # sent = sent[:1000000] # if Error?
         word_tokens = self.tagger.morphs(sent)
         result = [
             word for word in word_tokens if len(word) > 1 and word not in self.stopwords
@@ -40,29 +37,68 @@ class CustomTokenizer:
         return result
 
 
-def bertopic_modeling(cfg ,df: pd.DataFrame) -> pd.DataFrame:
-    """_summary_
+def concat_title_context(df):
+    add_title_context = []
+    for _, t in df.iterrows():
+        context = [t["title"]] + t["context"][0:2]
+        add_title_context.append((" ".join(context)).strip())
+    df["concat_text"] = add_title_context
+    return df
+
+
+def screened_articles(df, threshold=0.3):
+    df = concat_title_context(df)
+    indexes = []
+    for topic_n in sorted(df["topic"].unique()):
+        if topic_n == -1:
+            continue
+        matrix = []
+        topic_df = df[df["topic"] == topic_n]
+        idx = topic_df.index
+        length = len(topic_df)
+        # print(f'Num of articles on topic {topic_n}: {length}')
+        for c1 in topic_df["concat_text"]:
+            tmp = []
+            for c2 in topic_df["concat_text"]:
+                s1 = set(c1)
+                s2 = set(c2)
+                actual_jaccard = float(len(s1.intersection(s2))) / float(
+                    len(s1.union(s2))
+                )
+                tmp.append(actual_jaccard)
+            matrix.append(tmp)
+        matrix = np.array(matrix)
+        matrix = np.array(matrix > threshold)
+        G = nx.from_numpy_array(matrix)
+        attribute_sorted = sorted(G.degree, key=lambda x: x[1], reverse=True)
+        article_idx = [
+            idx
+            for (idx, _) in attribute_sorted
+            if (attribute_sorted[0][1] - int(length * 0.1)) <= _
+        ]
+        if len(attribute_sorted) >= 3 and len(article_idx) < 3:
+            article_idx = [idx for (idx, _) in attribute_sorted[:3]]
+        elif len(article_idx) > 12:
+            article_idx = [idx for (idx, _) in attribute_sorted[:12]]
+        # print(f'Num of articles after screening: {len(article_idx)}')
+        indexes += list(idx[article_idx])
+    return df.iloc[indexes]
+
+def bertopic_modeling(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Bertopic modeling을 진행하는 함수
 
     Args:
-        df (pd.DataFrame): _description_
-
+        df (pd.DataFrame): 해당 쿼리에 대한 input df
     Returns:
-        pd.DataFrame: _description_
+        pd.DataFrame: bertopic modeling을 통해 나온 topic 컬럼 + input df
     """
+    cfg = OmegaConf.load(os.path.join(ASSETS_DIR_PATH, "bertopic_config.yaml"))
     file_cfg = cfg.file
-    model_cfg = cfg.model 
+    model_cfg = cfg.model
 
-    # 중복 제거
-    drop_df = remove_duplicate(df)
+    docs = df["titleNdescription"].tolist()
 
-    # title 과 description 합치기
-    titles = drop_df["title"].to_list()
-    descriptions = drop_df["description"].to_list()
-    title_description_concat = [
-        title + " " + des for title, des in zip(titles, descriptions)
-    ]
-
-    preprocessed_docs = execute_preprocessing(title_description_concat)
     file_path = os.path.join(Path(__file__).parent, file_cfg.stopwords_path)
     f = open(file_path, "r")
     ko_stop_words = [text.rstrip() for text in f.readlines()]
@@ -70,60 +106,86 @@ def bertopic_modeling(cfg ,df: pd.DataFrame) -> pd.DataFrame:
     custom_tokenizer = CustomTokenizer(Mecab(), ko_stop_words)
     vectorizer = CountVectorizer(tokenizer=custom_tokenizer, max_features=3000)
 
+    # embedding 생성
+    model_name = model_cfg.model_name
+    sentence_model = SentenceTransformer(model_name, device="cuda")
+    embeddings = sentence_model.encode(docs, show_progress_bar=False)
+
+    # Create instances of GPU-accelerated UMAP and HDBSCAN
+    umap_model = UMAP(
+        n_neighbors=15, n_components=5, min_dist=0.0, metric="cosine", random_state=42
+    )
+    hdbscan_model = HDBSCAN(
+        min_cluster_size=8,
+        metric="euclidean",
+        cluster_selection_method="eom",
+        prediction_data=True,
+    )
+
     model = BERTopic(
-        embedding_model = model_cfg.model_name,
-        vectorizer_model = vectorizer,
-        top_n_words = model_cfg.top_n_words,
+        embedding_model=sentence_model,
+        umap_model=umap_model,
+        hdbscan_model=hdbscan_model,
+        vectorizer_model=vectorizer,
+        top_n_words=model_cfg.top_n_words,
         # nr_topics = model_cfg.nr_topics,
-        calculate_probabilities=True,
+        calculate_probabilities=False,
         verbose=True,
     )
 
     start = time.time()
-    # topics, probs = model.fit_transform(preprocessed_docs)
-    model.fit_transform(preprocessed_docs)
+    topics, probs = model.fit_transform(documents=docs, embeddings=embeddings)
+
+    # bertopic modeling 결과 outlier(-1)만 나올 경우
+    if np.sum(probs) == 0:
+        # CountVectorizer 진행
+        X = vectorizer.fit_transform(docs)
+
+        # l2 정규화
+        X = normalize(X)
+
+        # hdbscan 알고리즘 적용
+        cluster = HDBSCAN(
+            min_cluster_size=2,
+            metric="euclidean",
+            cluster_selection_method="eom",
+            prediction_data=True,
+        )
+
+        # trained labels
+        topics = cluster.fit_predict(X.toarray())
+        topics = [t + 1 for t in topics]
+
+    else:
+        threshold = 0.6
+
+        # 일정 확률이 threshold보다 낮다면 outlier로 만들기
+        while True:
+            threshold_topics = [
+                topic if prob > threshold else -1 for topic, prob in zip(topics, probs)
+            ]
+
+            # 만약 전부 outlier(-1)라면 threshold 내리기
+            if sum(threshold_topics) == len(topics) * -1:
+                threshold -= 0.05
+            else:
+                break
+
+        topics = threshold_topics
+
     end = time.time()
 
     print(f"{end - start:.5f} sec")
 
-    src_df = model.get_document_info(preprocessed_docs)
-    bertopic_df = pd.concat([drop_df, src_df["Topic"], src_df["Top_n_words"]], axis=1)
+    new_topics = pd.Series(topics, name="topic")
+    df = df.reset_index(drop=True)
+    bertopic_df = pd.concat([df, new_topics], axis=1)
 
+    # 유사한 기사가 맞는지 재확인
+    bertopic_df = screened_articles(bertopic_df, threshold=0.3)
+    bertopic_df = bertopic_df.reset_index(drop=True)
 
     return bertopic_df
-
-
-def remove_duplicate(df: pd.DataFrame) -> pd.DataFrame:
-    """_summary_
-
-    Args:
-        df (pd.DataFrame): _description_
-
-    Returns:
-        pd.DataFrame: _description_
-    """
-    drop_df = df.drop_duplicates("title")
-    drop_df = drop_df.drop_duplicates("originallink")
-    drop_df = drop_df.drop_duplicates("link")
-    drop_df = drop_df.drop_duplicates("description")
-    drop_df = drop_df.reset_index(drop=True)
-    return drop_df
-
-
-def execute_preprocessing(texts: List[str]) -> List[str]:
-    """_summary_
-
-    Args:
-        texts (List[str]): _description_
-
-    Returns:
-        List[str]: _description_
-    """
-    preprocessed_docs = remove_html_entity(texts)
-    preprocessed_docs = remove_markdown(preprocessed_docs)
-    preprocessed_docs = remove_bad_char(preprocessed_docs)
-    preprocessed_docs = remove_repeated_spacing(preprocessed_docs)
-    return preprocessed_docs
 
 
 if __name__ == "__main__":
@@ -131,13 +193,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="bertopic_config")
     args, _ = parser.parse_known_args()
-    cfg = OmegaConf.load(f"./{args.config}.yaml")
 
-    input_df = pd.read_csv("./crawl_result(삼성전자).csv")
+    # input_df = pd.read_pickle("./윤석열_20221201_20221203_crwal_news_context.pkl")
+    # input_df = pd.read_pickle("./윤석열_20221201_20221215_crwal_news_context.pkl")
+    input_df = pd.read_pickle("./삼성전자_20221201_20221215_crwal_news_context.pkl")
+
     print(input_df)
 
     print("=" * 100)
-    output_df = bertopic_modeling(cfg, input_df)
-    output_df.to_csv("result.csv", index=False)
-    print(cfg)
+    output_df = bertopic_modeling(input_df)
+    output_df.to_pickle("after_bertopic.pkl")
     print(output_df)

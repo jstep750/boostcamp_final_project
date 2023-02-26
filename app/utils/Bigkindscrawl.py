@@ -2,7 +2,7 @@ import pandas as pd
 import requests
 from collections import defaultdict
 
-def bigkinds_crawl(company_name:str,date_gte:int,date_lte:int) -> pd.DataFrame:
+def bigkinds_crawl(company_name:str,date_gte:int,date_lte:int,topk:int=9999) -> pd.DataFrame:
     '''
     input:
         company_name(str): 검색어
@@ -10,12 +10,11 @@ def bigkinds_crawl(company_name:str,date_gte:int,date_lte:int) -> pd.DataFrame:
         date_lte(int): 종료일
         news_num(int): 검색 뉴스 수
     output:
-        dataFrame['title','description','titleNdescription','URL','date']
+        dataFrame["title", "titleNdescription", "context", "URL", "date", "category1", "category2"]
     '''
 
     #response = List[{'_index','_type','_id','_score', '_source':{'title','description','titleNdescription','URL','date'}}]
-    response = requests.get(f"http://118.67.133.53:30001/search/{company_name}/?&date_gte={date_gte}&date_lte={date_lte}").json()
-    
+    response = requests.get(f"http://27.96.131.161:30001/new_search/{company_name}/?query_sentence={company_name}&index_name=bigkinds_new2&field=titleNdescription&date_gte={date_gte}&date_lte={date_lte}").json()
     # 데이터프레임으로 변환 news_df = ['title','description','titleNdescription','URL','date']
     news_df = defaultdict(list)
     for idx in range(len(response)):
@@ -23,5 +22,10 @@ def bigkinds_crawl(company_name:str,date_gte:int,date_lte:int) -> pd.DataFrame:
         for key, value in response_source.items():
             news_df[key].append(value)
     news_df = pd.DataFrame(news_df)
+    news_df = news_df.reset_index(drop=True)
     
     return news_df
+
+if __name__ == "__main__":
+    print(bigkinds_crawl("넥슨게임즈","20221201","20221231"))
+
